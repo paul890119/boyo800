@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>博幼800單：單字爭霸戰</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.2.0",
+        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+        "lucide-react": "https://esm.sh/lucide-react@0.292.0"
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-900 m-0 p-0 font-sans">
+  
+  <div id="root"></div>
+
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect, useRef } from 'react';
+    import { createRoot } from 'react-dom/client';
+    import { Play, BookOpen, Keyboard, MousePointerClick, Shuffle, Volume2, ArrowRight, RotateCcw, Check, X, Heart, Pause, Zap, Clock, ArrowLeft, Home, Rocket, Crosshair, Shield, Sparkles, Bot, Loader2, Star, Trophy, Medal, User } from 'lucide-react';
+
+    // --- 嚴格按照使用者提供之 L1 ~ L40 全新單字表 ---
+    const vocabularyData = {
+      1: [
+        { en: "husband", zh: "丈夫" }, { en: "wife", zh: "妻子" }, { en: "housewife", zh: "家庭主婦" },
+        { en: "Miss", zh: "小姐" }, { en: "thirteen", zh: "十三" }, { en: "fourteen", zh: "十四" },
+        { en: "fifteen", zh: "十五" }, { en: "sixteen", zh: "十六" }, { en: "seventeen", zh: "十七" },
+        { en: "eighteen", zh: "十八" }, { en: "nineteen", zh: "十九" }, { en: "twenty", zh: "二十" },
+        { en: "thirty", zh: "三十" }, { en: "forty", zh: "四十" }, { en: "fifty", zh: "五十" },
+        { en: "sixty", zh: "六十" }, { en: "seventy", zh: "七十" }, { en: "eighty", zh: "八十" },
+        { en: "ninety", zh: "九十" }, { en: "thousand", zh: "千" }
+      ],
+      2: [
+        { en: "number", zh: "數字" }, { en: "workbook", zh: "作業本" }, { en: "brush", zh: "刷子/畫筆" },
+        { en: "cellphone", zh: "手機" }, { en: "scooter", zh: "機車/滑板車" }, { en: "party", zh: "派對" },
+        { en: "gift", zh: "禮物" }, { en: "noon", zh: "中午" }, { en: "break", zh: "休息/打破" },
+        { en: "pretty", zh: "漂亮的" }, { en: "able", zh: "能夠的" }, { en: "young", zh: "年輕的" },
+        { en: "full", zh: "滿的/飽的" }, { en: "lucky", zh: "幸運的" }, { en: "so", zh: "所以" },
+        { en: "really", zh: "真的" }, { en: "during", zh: "在...期間" }, { en: "near", zh: "附近" },
+        { en: "guess", zh: "猜測" }, { en: "dining room", zh: "飯廳" }
+      ],
+      3: [
+        { en: "balcony", zh: "陽台" }, { en: "koala", zh: "無尾熊" }, { en: "hippo", zh: "河馬" },
+        { en: "zebra", zh: "斑馬" }, { en: "kangaroo", zh: "袋鼠" }, { en: "person", zh: "人" },
+        { en: "people", zh: "人們" }, { en: "man", zh: "男人" }, { en: "woman", zh: "女人" },
+        { en: "center", zh: "中心" }, { en: "future", zh: "未來" }, { en: "age", zh: "年紀" },
+        { en: "minute", zh: "分鐘" }, { en: "Christmas", zh: "聖誕節" }, { en: "bell", zh: "鈴鐺" },
+        { en: "turkey", zh: "火雞" }, { en: "thing", zh: "事物" }, { en: "glasses", zh: "眼鏡" },
+        { en: "belt", zh: "皮帶" }, { en: "think", zh: "認為/想" }
+      ],
+      4: [
+        { en: "quiet", zh: "安靜的" }, { en: "interesting", zh: "有趣的" }, { en: "favorite", zh: "最喜愛的" },
+        { en: "any", zh: "任何的" }, { en: "wait", zh: "等待" }, { en: "worry", zh: "擔心" },
+        { en: "get", zh: "得到" }, { en: "share", zh: "分享" }, { en: "kick", zh: "踢" },
+        { en: "remember", zh: "記得" }, { en: "fight", zh: "打架/對抗" }, { en: "shout", zh: "大叫" },
+        { en: "behind", zh: "在...後面" }, { en: "front", zh: "前面" }, { en: "between", zh: "在...之間" },
+        { en: "down", zh: "向下" }, { en: "then", zh: "然後" }, { en: "even", zh: "甚至" },
+        { en: "wrong", zh: "錯誤的" }, { en: "many", zh: "許多的" }
+      ],
+      5: [
+        { en: "something", zh: "某事" }, { en: "everything", zh: "每件事" }, { en: "anything", zh: "任何事" },
+        { en: "dodge ball", zh: "躲避球" }, { en: "tennis", zh: "網球" }, { en: "badminton", zh: "羽毛球" },
+        { en: "sport", zh: "運動" }, { en: "player", zh: "選手" }, { en: "skate", zh: "溜冰" },
+        { en: "past", zh: "過去的/經過" }, { en: "gym", zh: "體育館" }, { en: "rat", zh: "老鼠" },
+        { en: "hour", zh: "小時" }, { en: "story", zh: "故事" }, { en: "centimeter", zh: "公分" },
+        { en: "sure", zh: "確定的" }, { en: "only", zh: "只有/唯一的" }, { en: "wonderful", zh: "美好的" },
+        { en: "well", zh: "好地/井" }, { en: "hey", zh: "嘿" }
+      ],
+      6: [
+        { en: "catch", zh: "接住/抓" }, { en: "count", zh: "計算" }, { en: "hold", zh: "握住/舉辦" },
+        { en: "carry", zh: "攜帶" }, { en: "love", zh: "愛" }, { en: "kiss", zh: "親吻" },
+        { en: "else", zh: "其他的" }, { en: "may", zh: "可以/可能" }, { en: "before", zh: "之前" },
+        { en: "after", zh: "之後" }, { en: "about", zh: "關於" }, { en: "or", zh: "或" },
+        { en: "off", zh: "離開/關閉" }, { en: "noodle", zh: "麵條" }, { en: "chocolate", zh: "巧克力" },
+        { en: "shake", zh: "搖晃" }, { en: "sugar", zh: "糖" }, { en: "meal", zh: "一餐" },
+        { en: "bottle", zh: "瓶子" }, { en: "plate", zh: "盤子" }
+      ],
+      7: [
+        { en: "pick", zh: "撿起/挑選" }, { en: "mean", zh: "意思/意指" }, { en: "first", zh: "第一" },
+        { en: "second", zh: "第二/秒" }, { en: "third", zh: "第三" }, { en: "money", zh: "錢" },
+        { en: "Mother's Day", zh: "母親節" }, { en: "idea", zh: "主意" }, { en: "because", zh: "因為" },
+        { en: "drawer", zh: "抽屜" }, { en: "bath", zh: "洗澡" }, { en: "cow", zh: "母牛" },
+        { en: "market", zh: "市場" }, { en: "expensive", zh: "昂貴的" }, { en: "cheap", zh: "便宜的" },
+        { en: "enough", zh: "足夠的" }, { en: "all", zh: "全部" }, { en: "poor", zh: "貧窮的" },
+        { en: "early", zh: "早的" }, { en: "dirty", zh: "髒的" }
+      ],
+      8: [
+        { en: "easy", zh: "簡單的" }, { en: "hard", zh: "困難的/硬的" }, { en: "busy", zh: "忙碌的" },
+        { en: "free", zh: "免費的/自由的" }, { en: "need", zh: "需要" }, { en: "end", zh: "結束" },
+        { en: "cost", zh: "花費" }, { en: "buy", zh: "買" }, { en: "put", zh: "放置" },
+        { en: "feed", zh: "餵食" }, { en: "hate", zh: "討厭" }, { en: "sell", zh: "賣" },
+        { en: "also", zh: "也" }, { en: "once", zh: "一次/曾經" }, { en: "twice", zh: "兩次" },
+        { en: "of", zh: "...的" }, { en: "place", zh: "地方" }, { en: "road", zh: "道路" },
+        { en: "temple", zh: "寺廟" }, { en: "museum", zh: "博物館" }
+      ],
+      9: [
+        { en: "hotel", zh: "旅館" }, { en: "season", zh: "季節" }, { en: "high", zh: "高的" },
+        { en: "autumn", zh: "秋天" }, { en: "snow", zh: "雪" }, { en: "snowman", zh: "雪人" },
+        { en: "plan", zh: "計畫" }, { en: "date", zh: "日期/約會" }, { en: "Father's Day", zh: "父親節" },
+        { en: "USA", zh: "美國" }, { en: "photo", zh: "照片" }, { en: "mind", zh: "介意/心智" },
+        { en: "work", zh: "工作" }, { en: "exercise", zh: "運動/練習" }, { en: "turtle", zh: "烏龜" },
+        { en: "practice", zh: "練習" }, { en: "race", zh: "比賽/賽跑" }, { en: "team", zh: "隊伍" },
+        { en: "problem", zh: "問題" }, { en: "toe", zh: "腳趾" }
+      ],
+      10: [
+        { en: "kind", zh: "種類/親切的" }, { en: "violin", zh: "小提琴" }, { en: "flute", zh: "長笛" },
+        { en: "special", zh: "特別的" }, { en: "afraid", zh: "害怕的" }, { en: "same", zh: "相同的" },
+        { en: "different", zh: "不同的" }, { en: "snowy", zh: "下雪的" }, { en: "dry", zh: "乾的" },
+        { en: "wet", zh: "濕的" }, { en: "popular", zh: "受歡迎的" }, { en: "dark", zh: "黑暗的" },
+        { en: "know", zh: "知道" }, { en: "keep", zh: "保持" }, { en: "join", zh: "參加" },
+        { en: "throw", zh: "丟" }, { en: "hit", zh: "打擊" }, { en: "enjoy", zh: "享受" },
+        { en: "bow", zh: "鞠躬/弓" }, { en: "win", zh: "贏" }
+      ],
+      11: [
+        { en: "learn", zh: "學習" }, { en: "climb", zh: "攀爬" }, { en: "hike", zh: "健行" },
+        { en: "camp", zh: "露營" }, { en: "everyone", zh: "每個人" }, { en: "together", zh: "一起" },
+        { en: "ago", zh: "以前" }, { en: "never", zh: "從不" }, { en: "always", zh: "總是" },
+        { en: "usually", zh: "通常" }, { en: "sometimes", zh: "有時" }, { en: "seldom", zh: "很少" },
+        { en: "was", zh: "是(過去式)" }, { en: "were", zh: "是(過去式)" }, { en: "insect", zh: "昆蟲" },
+        { en: "bat", zh: "蝙蝠/球棒" }, { en: "butterfly", zh: "蝴蝶" }, { en: "spider", zh: "蜘蛛" },
+        { en: "whale", zh: "鯨魚" }, { en: "hill", zh: "山丘" }
+      ],
+      12: [
+        { en: "island", zh: "島嶼" }, { en: "present", zh: "禮物/現在" }, { en: "junior high school", zh: "國中" },
+        { en: "course", zh: "課程" }, { en: "art", zh: "藝術/美術" }, { en: "history", zh: "歷史" },
+        { en: "science", zh: "科學" }, { en: "lesson", zh: "課" }, { en: "subject", zh: "科目" },
+        { en: "test", zh: "考試" }, { en: "vacation", zh: "假期" }, { en: "holiday", zh: "假日" },
+        { en: "Teacher's Day", zh: "教師節" }, { en: "festival", zh: "節慶" }, { en: "Moon Festival", zh: "中秋節" },
+        { en: "half", zh: "一半" }, { en: "quarter", zh: "四分之一" }, { en: "noise", zh: "噪音" },
+        { en: "show", zh: "展示/表演" }, { en: "start", zh: "開始" }
+      ],
+      13: [
+        { en: "stay", zh: "停留" }, { en: "Ms.", zh: "女士" }, { en: "kid", zh: "小孩" },
+        { en: "child", zh: "孩子" }, { en: "boat", zh: "小船" }, { en: "floor", zh: "地板" },
+        { en: "frisbee", zh: "飛盤" }, { en: "hurt", zh: "受傷" }, { en: "begin", zh: "開始" },
+        { en: "finish", zh: "完成" }, { en: "happen", zh: "發生" }, { en: "jog", zh: "慢跑" },
+        { en: "hop", zh: "單腳跳" }, { en: "teach", zh: "教" }, { en: "important", zh: "重要的" },
+        { en: "health", zh: "健康" }, { en: "healthy", zh: "健康的" }, { en: "weak", zh: "虛弱的" },
+        { en: "terrible", zh: "可怕的" }, { en: "funny", zh: "好笑的" }
+      ],
+      14: [
+        { en: "lot", zh: "許多" }, { en: "already", zh: "已經" }, { en: "just", zh: "剛剛/只是" },
+        { en: "why", zh: "為什麼" }, { en: "couch", zh: "沙發" }, { en: "give", zh: "給予" },
+        { en: "garden", zh: "花園" }, { en: "grass", zh: "草" }, { en: "refrigerator", zh: "冰箱" },
+        { en: "police", zh: "警察" }, { en: "officer", zh: "軍官/警官" }, { en: "actress", zh: "女演員" },
+        { en: "writer", zh: "作家" }, { en: "reporter", zh: "記者" }, { en: "fisherman", zh: "漁夫" },
+        { en: "factory", zh: "工廠" }, { en: "again", zh: "再一次" }, { en: "mail", zh: "郵件" },
+        { en: "mailman", zh: "郵差" }, { en: "glove", zh: "手套" }
+      ],
+      15: [
+        { en: "ring", zh: "戒指/鈴響" }, { en: "rope", zh: "繩子" }, { en: "medicine", zh: "藥" },
+        { en: "stomach", zh: "胃" }, { en: "fever", zh: "發燒" }, { en: "throat", zh: "喉嚨" },
+        { en: "sore", zh: "痠痛的" }, { en: "language", zh: "語言" }, { en: "band", zh: "樂團" },
+        { en: "drum", zh: "鼓" }, { en: "picnic", zh: "野餐" }, { en: "goat", zh: "山羊" },
+        { en: "rose", zh: "玫瑰" }, { en: "foreigner", zh: "外國人" }, { en: "e-mail", zh: "電子郵件" },
+        { en: "honey", zh: "蜂蜜" }, { en: "dear", zh: "親愛的" }, { en: "common", zh: "常見的" },
+        { en: "little", zh: "小的/少量的" }, { en: "straight", zh: "直的" }
+      ],
+      16: [
+        { en: "understand", zh: "了解" }, { en: "invite", zh: "邀請" }, { en: "visit", zh: "拜訪" },
+        { en: "prepare", zh: "準備" }, { en: "mop", zh: "拖把/拖地" }, { en: "send", zh: "寄送" },
+        { en: "could", zh: "可以/能夠" }, { en: "still", zh: "仍然" }, { en: "soon", zh: "很快地" },
+        { en: "me", zh: "我(受格)" }, { en: "him", zh: "他(受格)" }, { en: "often", zh: "時常" },
+        { en: "us", zh: "我們(受格)" }, { en: "them", zh: "他們(受格)" }, { en: "mine", zh: "我的東西" },
+        { en: "yours", zh: "你的東西" }, { en: "hers", zh: "她的東西" }, { en: "birthday", zh: "生日" },
+        { en: "ours", zh: "我們的東西" }, { en: "theirs", zh: "他們的東西" }
+      ],
+      17: [
+        { en: "cap", zh: "棒球帽" }, { en: "jeans", zh: "牛仔褲" }, { en: "sweater", zh: "毛衣" },
+        { en: "American", zh: "美國人/美國的" }, { en: "waiter", zh: "男服務生" }, { en: "clerk", zh: "店員" },
+        { en: "job", zh: "工作" }, { en: "gray", zh: "灰色" }, { en: "purple", zh: "紫色" },
+        { en: "airplane", zh: "飛機" }, { en: "motorcycle", zh: "機車" }, { en: "street", zh: "街道" },
+        { en: "town", zh: "城鎮" }, { en: "block", zh: "街區" }, { en: "city", zh: "城市" },
+        { en: "corner", zh: "角落" }, { en: "department store", zh: "百貨公司" }, { en: "theater", zh: "戲院" },
+        { en: "movie theater", zh: "電影院" }, { en: "crazy", zh: "瘋狂的" }
+      ],
+      18: [
+        { en: "shop", zh: "商店/購物" }, { en: "flower shop", zh: "花店" }, { en: "station", zh: "車站" },
+        { en: "police station", zh: "警察局" }, { en: "railway", zh: "鐵路" }, { en: "turn", zh: "轉彎" },
+        { en: "left", zh: "左邊" }, { en: "right", zh: "右邊/正確的" }, { en: "stamp", zh: "郵票/蓋章" },
+        { en: "news", zh: "新聞" }, { en: "blanket", zh: "毯子" }, { en: "change", zh: "改變/零錢" },
+        { en: "find", zh: "尋找" }, { en: "lose", zh: "失去/輸" }, { en: "stop", zh: "停止/站牌" },
+        { en: "arrive", zh: "到達" }, { en: "bring", zh: "帶來" }, { en: "spend", zh: "花費" },
+        { en: "pay", zh: "付錢" }, { en: "up", zh: "向上" }
+      ],
+      19: [
+        { en: "agree", zh: "同意" }, { en: "garbage", zh: "垃圾" }, { en: "forget", zh: "忘記" },
+        { en: "hear", zh: "聽見" }, { en: "another", zh: "另一個" }, { en: "delicious", zh: "美味的" },
+        { en: "yummy", zh: "好吃的" }, { en: "difficult", zh: "困難的" }, { en: "as", zh: "如同/作為" },
+        { en: "own", zh: "擁有/自己的" }, { en: "true", zh: "真實的" }, { en: "sea", zh: "海" },
+        { en: "welcome", zh: "歡迎" }, { en: "proud", zh: "驕傲的" }, { en: "away", zh: "離開" },
+        { en: "will", zh: "將會/意志" }, { en: "camera", zh: "相機" }, { en: "radio", zh: "收音機" },
+        { en: "machine", zh: "機器" }, { en: "tape", zh: "膠帶/錄音帶" }
+      ],
+      20: [
+        { en: "myself", zh: "我自己" }, { en: "yourself", zh: "你自己" }, { en: "yourselves", zh: "你們自己" },
+        { en: "himself", zh: "他自己" }, { en: "herself", zh: "她自己" }, { en: "itself", zh: "牠自己" },
+        { en: "ourselves", zh: "我們自己" }, { en: "themselves", zh: "他們自己" }, { en: "recorder", zh: "錄音機/直笛" },
+        { en: "video", zh: "影片" }, { en: "price", zh: "價格" }, { en: "total", zh: "總數" },
+        { en: "watermelon", zh: "西瓜" }, { en: "papaya", zh: "木瓜" }, { en: "lemon", zh: "檸檬" },
+        { en: "guava", zh: "芭樂" }, { en: "sir", zh: "先生" }, { en: "Dr.", zh: "醫生/博士" },
+        { en: "neighbor", zh: "鄰居" }, { en: "Easter", zh: "復活節" }
+      ],
+      21: [
+        { en: "basket", zh: "籃子" }, { en: "church", zh: "教堂" }, { en: "hunt", zh: "打獵" },
+        { en: "roll", zh: "滾動" }, { en: "hang", zh: "懸掛" }, { en: "snack", zh: "點心" },
+        { en: "tool", zh: "工具" }, { en: "letter", zh: "信件/字母" }, { en: "envelope", zh: "信封" },
+        { en: "ground", zh: "地面" }, { en: "R.O.C.", zh: "中華民國" }, { en: "world", zh: "世界" },
+        { en: "seed", zh: "種子" }, { en: "other", zh: "其他的" }, { en: "taste", zh: "品嚐/味道" },
+        { en: "smell", zh: "聞/氣味" }, { en: "sound", zh: "聲音/聽起來" }, { en: "feel", zh: "感覺" },
+        { en: "large", zh: "大的" }, { en: "heavy", zh: "重的" }
+      ],
+      22: [
+        { en: "try", zh: "嘗試" }, { en: "comfortable", zh: "舒服的" }, { en: "successful", zh: "成功的" },
+        { en: "famous", zh: "著名的" }, { en: "care", zh: "關心" }, { en: "careful", zh: "小心的" },
+        { en: "friendly", zh: "友善的" }, { en: "fresh", zh: "新鮮的" }, { en: "sweet", zh: "甜的" },
+        { en: "each", zh: "每個" }, { en: "swing", zh: "鞦韆/搖擺" }, { en: "slide", zh: "滑梯/滑動" },
+        { en: "hide", zh: "躲藏" }, { en: "restaurant", zh: "餐廳" }, { en: "drop", zh: "掉落" },
+        { en: "move", zh: "移動" }, { en: "paste", zh: "黏貼" }, { en: "become", zh: "變成" },
+        { en: "around", zh: "在...周圍" }, { en: "more", zh: "更多的" }
+      ],
+      23: [
+        { en: "most", zh: "最多的" }, { en: "whose", zh: "誰的" }, { en: "than", zh: "比" },
+        { en: "heart", zh: "心臟" }, { en: "arm", zh: "手臂" }, { en: "nail", zh: "指甲/釘子" },
+        { en: "knee", zh: "膝蓋" }, { en: "shoulder", zh: "肩膀" }, { en: "part", zh: "部分" },
+        { en: "rest", zh: "休息/其餘" }, { en: "cut", zh: "切" }, { en: "fill", zh: "填滿" },
+        { en: "pack", zh: "打包" }, { en: "package", zh: "包裹" }, { en: "air", zh: "空氣" },
+        { en: "smoke", zh: "煙/抽煙" }, { en: "earth", zh: "地球/泥土" }, { en: "plant", zh: "植物" },
+        { en: "life", zh: "生命/生活" }, { en: "light", zh: "光線/輕的" }
+      ],
+      24: [
+        { en: "tub", zh: "浴缸" }, { en: "mat", zh: "墊子" }, { en: "candle", zh: "蠟燭" },
+        { en: "lamp", zh: "燈" }, { en: "fire", zh: "火" }, { en: "wind", zh: "風" },
+        { en: "sky", zh: "天空" }, { en: "rainbow", zh: "彩虹" }, { en: "yet", zh: "還沒/然而" },
+        { en: "wave", zh: "波浪/揮手" }, { en: "rock", zh: "岩石" }, { en: "nature", zh: "大自然" },
+        { en: "land", zh: "土地" }, { en: "pond", zh: "池塘" }, { en: "mud", zh: "泥巴" },
+        { en: "mountain", zh: "山" }, { en: "beach", zh: "海灘" }, { en: "river", zh: "河流" },
+        { en: "lake", zh: "湖泊" }, { en: "please", zh: "請/取悅" }
+      ],
+      25: [
+        { en: "chance", zh: "機會" }, { en: "prize", zh: "獎品" }, { en: "moment", zh: "片刻" },
+        { en: "giant", zh: "巨人/巨大的" }, { en: "mile", zh: "英里" }, { en: "mad", zh: "生氣的/發瘋的" },
+        { en: "lonely", zh: "寂寞的" }, { en: "unhappy", zh: "不快樂的" }, { en: "shy", zh: "害羞的" },
+        { en: "ice", zh: "冰" }, { en: "loud", zh: "大聲的" }, { en: "strange", zh: "奇怪的" },
+        { en: "both", zh: "兩者" }, { en: "bright", zh: "明亮的" }, { en: "convenient", zh: "方便的" },
+        { en: "fix", zh: "修理" }, { en: "choose", zh: "選擇" }, { en: "fact", zh: "事實" },
+        { en: "cry", zh: "哭泣" }, { en: "smile", zh: "微笑" }
+      ],
+      26: [
+        { en: "save", zh: "拯救/存" }, { en: "tell", zh: "告訴" }, { en: "maybe", zh: "也許" },
+        { en: "either", zh: "也(不)/兩者之一" }, { en: "sit", zh: "坐" }, { en: "quick", zh: "快速的" },
+        { en: "ticket", zh: "票" }, { en: "carefully", zh: "小心地" }, { en: "until", zh: "直到" },
+        { en: "nothing", zh: "沒什麼" }, { en: "must", zh: "必須" }, { en: "should", zh: "應該" },
+        { en: "bean", zh: "豆子" }, { en: "bun", zh: "小圓麵包" }, { en: "butter", zh: "奶油" },
+        { en: "cheese", zh: "起司" }, { en: "French fries", zh: "薯條" }, { en: "lettuce", zh: "萵苣" },
+        { en: "steak", zh: "牛排" }, { en: "spaghetti", zh: "義大利麵" }
+      ],
+      27: [
+        { en: "toast", zh: "吐司" }, { en: "salad", zh: "沙拉" }, { en: "order", zh: "點餐/命令" },
+        { en: "ham", zh: "火腿" }, { en: "menu", zh: "菜單" }, { en: "castle", zh: "城堡" },
+        { en: "king", zh: "國王" }, { en: "queen", zh: "皇后" }, { en: "prince", zh: "王子" },
+        { en: "princess", zh: "公主" }, { en: "soldier", zh: "士兵" }, { en: "dragon", zh: "龍" },
+        { en: "quiz", zh: "小考" }, { en: "check", zh: "檢查/支票" }, { en: "much", zh: "許多的" },
+        { en: "habit", zh: "習慣" }, { en: "word", zh: "字" }, { en: "sentence", zh: "句子" },
+        { en: "mark", zh: "標記/分數" }, { en: "dictionary", zh: "字典" }
+      ],
+      28: [
+        { en: "point", zh: "分數/點" }, { en: "grade", zh: "年級/成績" }, { en: "mistake", zh: "錯誤" },
+        { en: "elementary school", zh: "小學" }, { en: "bench", zh: "長椅" }, { en: "seat", zh: "座位" },
+        { en: "office", zh: "辦公室" }, { en: "post office", zh: "郵局" }, { en: "side", zh: "旁邊" },
+        { en: "way", zh: "方法/路" }, { en: "nobody", zh: "沒有人" }, { en: "guy", zh: "傢伙" },
+        { en: "group", zh: "團體" }, { en: "country", zh: "國家/鄉下" }, { en: "program", zh: "節目/程式" },
+        { en: "straw", zh: "吸管/稻草" }, { en: "knife", zh: "刀子" }, { en: "fork", zh: "叉子" },
+        { en: "spoon", zh: "湯匙" }, { en: "lovely", zh: "可愛的" }
+      ],
+      29: [
+        { en: "clear", zh: "清楚的/晴朗的" }, { en: "correct", zh: "正確的" }, { en: "far", zh: "遠的" },
+        { en: "safe", zh: "安全的" }, { en: "sharp", zh: "銳利的" }, { en: "lazy", zh: "懶惰的" },
+        { en: "glad", zh: "高興的" }, { en: "excellent", zh: "優秀的" }, { en: "over", zh: "超過/結束" },
+        { en: "pass", zh: "通過/傳遞" }, { en: "fail", zh: "失敗/不及格" }, { en: "preparation", zh: "準備" },
+        { en: "cheat", zh: "作弊" }, { en: "copy", zh: "複製/抄襲" }, { en: "blow", zh: "吹" },
+        { en: "knock", zh: "敲" }, { en: "rise", zh: "升起" }, { en: "decide", zh: "決定" },
+        { en: "notice", zh: "注意" }, { en: "collect", zh: "收集" }
+      ],
+      30: [
+        { en: "leave", zh: "離開/留下" }, { en: "treat", zh: "對待/請客" }, { en: "along", zh: "沿著" },
+        { en: "without", zh: "沒有" }, { en: "inside", zh: "在...裡面" }, { en: "repeat", zh: "重複" },
+        { en: "perhaps", zh: "也許" }, { en: "if", zh: "如果" }, { en: "although", zh: "雖然" },
+        { en: "hope", zh: "希望" }, { en: "rule", zh: "規則" }, { en: "wish", zh: "希望/祝福" },
+        { en: "dot", zh: "點" }, { en: "circle", zh: "圓形" }, { en: "shape", zh: "形狀" },
+        { en: "size", zh: "大小/尺寸" }, { en: "square", zh: "正方形" }, { en: "let", zh: "讓" },
+        { en: "yard", zh: "院子/碼" }, { en: "inch", zh: "英吋" }
+      ],
+      31: [
+        { en: "row", zh: "排/划船" }, { en: "million", zh: "百萬" }, { en: "goose", zh: "鵝" },
+        { en: "bug", zh: "蟲" }, { en: "hen", zh: "母雞" }, { en: "Halloween", zh: "萬聖節" },
+        { en: "lantern", zh: "燈籠" }, { en: "ghost", zh: "鬼" }, { en: "mask", zh: "面具" },
+        { en: "doorbell", zh: "門鈴" }, { en: "surprise", zh: "驚喜" }, { en: "experience", zh: "經驗" },
+        { en: "senior high school", zh: "高中" }, { en: "joy", zh: "歡樂" }, { en: "oil", zh: "油" },
+        { en: "gas", zh: "瓦斯/氣體" }, { en: "top", zh: "頂端" }, { en: "several", zh: "幾個的" },
+        { en: "real", zh: "真實的" }, { en: "dangerous", zh: "危險的" }
+      ],
+      32: [
+        { en: "excited", zh: "感到興奮的" }, { en: "exciting", zh: "令人興奮的" }, { en: "scared", zh: "害怕的" },
+        { en: "bored", zh: "感到無聊的" }, { en: "homework", zh: "家庭作業" }, { en: "surprised", zh: "感到驚訝的" },
+        { en: "north", zh: "北方" }, { en: "west", zh: "西方" }, { en: "east", zh: "東方" },
+        { en: "south", zh: "南方" }, { en: "grow", zh: "成長/種植" }, { en: "since", zh: "自從" },
+        { en: "traffic", zh: "交通" }, { en: "case", zh: "案件/盒子" }, { en: "gate", zh: "大門" },
+        { en: "teenager", zh: "青少年" }, { en: "restroom", zh: "洗手間" }, { en: "uniform", zh: "制服" },
+        { en: "paint", zh: "油漆/畫" }, { en: "bridge", zh: "橋" }
+      ],
+      33: [
+        { en: "airport", zh: "機場" }, { en: "postcard", zh: "明信片" }, { en: "stair", zh: "樓梯" },
+        { en: "hard-working", zh: "勤勉的" }, { en: "clap", zh: "拍手" }, { en: "serious", zh: "嚴肅的/嚴重的" },
+        { en: "simple", zh: "簡單的" }, { en: "cross", zh: "越過" }, { en: "enter", zh: "進入" },
+        { en: "appear", zh: "出現" }, { en: "space", zh: "空間/太空" }, { en: "lie", zh: "躺下/說謊" },
+        { en: "shine", zh: "照耀" }, { en: "pray", zh: "祈禱" }, { en: "belong", zh: "屬於" },
+        { en: "build", zh: "建造" }, { en: "ever", zh: "曾經" }, { en: "however", zh: "然而" },
+        { en: "almost", zh: "幾乎" }, { en: "finally", zh: "最後" }
+      ],
+      34: [
+        { en: "quite", zh: "相當" }, { en: "whether", zh: "是否" }, { en: "stand", zh: "站立" },
+        { en: "except", zh: "除了...之外" }, { en: "club", zh: "社團" }, { en: "chess", zh: "西洋棋" },
+        { en: "chalk", zh: "粉筆" }, { en: "newspaper", zh: "報紙" }, { en: "glue", zh: "膠水" },
+        { en: "hurry", zh: "匆忙" }, { en: "hobby", zh: "嗜好" }, { en: "across", zh: "橫越" },
+        { en: "vest", zh: "背心" }, { en: "interest", zh: "興趣" }, { en: "interested", zh: "感興趣的" },
+        { en: "pleasure", zh: "樂趣" }, { en: "business", zh: "商業/生意" }, { en: "salt", zh: "鹽" },
+        { en: "popcorn", zh: "爆米花" }, { en: "bakery", zh: "麵包店" }
+      ],
+      35: [
+        { en: "public", zh: "公開的/大眾" }, { en: "truck", zh: "卡車" }, { en: "apartment", zh: "公寓" },
+        { en: "heat", zh: "熱度/加熱" }, { en: "boss", zh: "老闆" }, { en: "stranger", zh: "陌生人" },
+        { en: "meeting", zh: "會議" }, { en: "nod", zh: "點頭" }, { en: "born", zh: "出生" },
+        { en: "stupid", zh: "愚笨的" }, { en: "polite", zh: "有禮貌的" }, { en: "less", zh: "較少的" },
+        { en: "possible", zh: "可能的" }, { en: "rich", zh: "富有的" }, { en: "brown", zh: "棕色" },
+        { en: "honest", zh: "誠實的" }, { en: "bake", zh: "烘焙" }, { en: "attack", zh: "攻擊" },
+        { en: "lend", zh: "借出" }, { en: "borrow", zh: "借入" }
+      ],
+      36: [
+        { en: "pull", zh: "拉" }, { en: "push", zh: "推" }, { en: "dig", zh: "挖" },
+        { en: "fry", zh: "油炸/炒" }, { en: "cover", zh: "覆蓋" }, { en: "raise", zh: "舉起/養育" },
+        { en: "type", zh: "打字/類型" }, { en: "follow", zh: "跟隨" }, { en: "boil", zh: "沸騰/煮沸" },
+        { en: "below", zh: "在...下方" }, { en: "above", zh: "在...上方" }, { en: "someone", zh: "某人" },
+        { en: "anyone", zh: "任何人" }, { en: "trouble", zh: "麻煩" }, { en: "trick", zh: "惡作劇/把戲" },
+        { en: "power", zh: "力量/電力" }, { en: "New Year's Day", zh: "元旦" }, { en: "eve", zh: "前夕" },
+        { en: "New Year's Eve", zh: "除夕" }, { en: "Chinese New Year", zh: "農曆新年" }
+      ],
+      37: [
+        { en: "dumpling", zh: "水餃" }, { en: "note", zh: "筆記/音符" }, { en: "line", zh: "線/排隊" },
+        { en: "voice", zh: "聲音" }, { en: "wake", zh: "醒來" }, { en: "screen", zh: "螢幕" },
+        { en: "puppy", zh: "小狗" }, { en: "lid", zh: "蓋子" }, { en: "cage", zh: "籠子" },
+        { en: "sight", zh: "視力/景象" }, { en: "secretary", zh: "秘書" }, { en: "list", zh: "清單" },
+        { en: "pair", zh: "一雙/一對" }, { en: "pin", zh: "大頭針/別針" }, { en: "pipe", zh: "管子" },
+        { en: "medium", zh: "中等的" }, { en: "married", zh: "已婚的" }, { en: "modern", zh: "現代的" },
+        { en: "foreign", zh: "外國的" }, { en: "national", zh: "國家的" }
+      ],
+      38: [
+        { en: "few", zh: "少數的" }, { en: "useful", zh: "有用的" }, { en: "helpful", zh: "有幫助的" },
+        { en: "least", zh: "最少的" }, { en: "blind", zh: "盲的" }, { en: "tidy", zh: "整潔的" },
+        { en: "believe", zh: "相信" }, { en: "celebrate", zh: "慶祝" }, { en: "laugh", zh: "笑" },
+        { en: "lead", zh: "引導/帶領" }, { en: "playground", zh: "遊樂場" }, { en: "set", zh: "設定/一套" },
+        { en: "bite", zh: "咬" }, { en: "die", zh: "死亡" }, { en: "somewhere", zh: "某處" },
+        { en: "abroad", zh: "在國外" }, { en: "beside", zh: "在...旁邊" }, { en: "example", zh: "例子" },
+        { en: "knowledge", zh: "知識" }, { en: "matter", zh: "事情/要緊" }
+      ],
+      39: [
+        { en: "excuse", zh: "藉口/原諒" }, { en: "magic", zh: "魔術/神奇的" }, { en: "planet", zh: "行星" },
+        { en: "base", zh: "基礎/基地" }, { en: "typhoon", zh: "颱風" }, { en: "kilogram", zh: "公斤" },
+        { en: "pound", zh: "磅" }, { en: "gram", zh: "公克" }, { en: "page", zh: "頁" },
+        { en: "dozen", zh: "一打" }, { en: "cent", zh: "分" }, { en: "businessman", zh: "商人" },
+        { en: "salesman", zh: "推銷員" }, { en: "shopkeeper", zh: "店主" }, { en: "lawyer", zh: "律師" },
+        { en: "dentist", zh: "牙醫" }, { en: "touch", zh: "觸摸" }, { en: "headache", zh: "頭痛" },
+        { en: "cheer", zh: "歡呼" }, { en: "leader", zh: "領導者" }
+      ],
+      40: [
+        { en: "class leader", zh: "班長" }, { en: "ready", zh: "準備好的" }, { en: "every", zh: "每一個" },
+        { en: "kill", zh: "殺死" }, { en: "barbecue", zh: "烤肉" }, { en: "sidewalk", zh: "人行道" },
+        { en: "middle", zh: "中間" }, { en: "bottom", zh: "底部" }, { en: "shark", zh: "鯊魚" },
+        { en: "low", zh: "低的" }, { en: "dead", zh: "死亡的" }, { en: "slim", zh: "苗條的" },
+        { en: "thick", zh: "厚的" }, { en: "burn", zh: "燃燒" }, { en: "tie", zh: "綁/領帶" },
+        { en: "deal", zh: "交易/處理" }, { en: "piece", zh: "片/塊" }, { en: "into", zh: "進入" },
+        { en: "Internet", zh: "網際網路" }, { en: "interview", zh: "面試" }
+      ]
+    };
+
+    const shuffleArray = (array) => {
+      const newArray = [...array];
+      for (let i = newArray.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+      }
+      return newArray;
+    };
+
+    const speakWord = (word) => {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(word);
+        utterance.lang = 'en-US';
+        utterance.rate = 0.9;
+        
+        const voices = window.speechSynthesis.getVoices();
+        const bestVoice = voices.find(voice => 
+          voice.lang.includes('en-US') && (voice.name.includes('Google') || voice.name.includes('Samantha') || voice.name.includes('Siri'))
+        ) || voices.find(voice => voice.lang.includes('en-')); 
+        
+        if (bestVoice) {
+          utterance.voice = bestVoice;
+        }
+
+        window.speechSynthesis.speak(utterance);
+      }
+    };
+
+    // --- 本地紀錄儲存與讀取 (Local Storage) ---
+    const STORAGE_KEY = 'boyoGameProgress_v1';
+    const getSavedProgress = () => {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) return JSON.parse(saved);
+      } catch(e) { console.error("讀取進度失敗", e); }
+      return { totalScore: 0, totalStars: 0, lessonStars: {} };
+    };
+    const saveProgress = (progress) => {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+    };
+
+    function BoyoGameApp() {
+      const [screen, setScreen] = useState('home'); // home, profile, lesson, mode, game, result
+      const [selectedLesson, setSelectedLesson] = useState(null);
+      const [selectedMode, setSelectedMode] = useState(null); 
+      
+      const [gameWords, setGameWords] = useState([]);
+      const [currentIndex, setCurrentIndex] = useState(0);
+      
+      const [score, setScore] = useState(0);
+      const [lives, setLives] = useState(3);
+      const [combo, setCombo] = useState(0);
+      const [timeLeft, setTimeLeft] = useState(100); 
+      const [isPaused, setIsPaused] = useState(false);
+      
+      const [feedback, setFeedback] = useState(null); 
+      const [options, setOptions] = useState([]);
+      const [scrambleTiles, setScrambleTiles] = useState([]);
+      const [spellingInput, setSpellingInput] = useState('');
+      const [shotAnswer, setShotAnswer] = useState(null); 
+      const inputRef = useRef(null);
+
+      const [wrongWords, setWrongWords] = useState([]);
+      const [aiTip, setAiTip] = useState(null);
+      const [isAiLoading, setIsAiLoading] = useState(false);
+      const [aiError, setAiError] = useState(null);
+
+      // --- 進度狀態 ---
+      const [progress, setProgress] = useState(getSavedProgress());
+
+      useEffect(() => {
+        let timer;
+        if (screen === 'game' && !isPaused && feedback === null && timeLeft > 0) {
+          timer = setInterval(() => {
+            setTimeLeft((prev) => {
+              if (prev <= 1) {
+                clearInterval(timer);
+                handleAnswer('', true);
+                return 0;
+              }
+              return prev - 1;
+            });
+          }, 100); 
+        }
+        return () => clearInterval(timer);
+      }, [screen, isPaused, feedback, timeLeft]);
+
+      const startGame = (mode) => {
+        setSelectedMode(mode);
+        const words = shuffleArray(vocabularyData[selectedLesson]).slice(0, 20); 
+        setGameWords(words);
+        setCurrentIndex(0);
+        setScore(0);
+        setLives(3);
+        setCombo(0);
+        setFeedback(null);
+        setShotAnswer(null);
+        setWrongWords([]); 
+        setAiTip(null); 
+        setAiError(null);
+        setIsPaused(false);
+        setupQuestion(words[0], mode, words);
+        setScreen('game');
+      };
+
+      const setupQuestion = (word, mode, allWords) => {
+        setFeedback(null);
+        setShotAnswer(null);
+        setTimeLeft(100); 
+        
+        if (mode === 'recognition') {
+          const wrongOptions = allWords
+            .filter(w => w.en !== word.en)
+            .sort(() => 0.5 - Math.random())
+            .slice(0, 3);
+          setOptions(shuffleArray([word, ...wrongOptions]));
+        } else if (mode === 'scramble') {
+          const chars = word.en.split('');
+          let shuffledChars = shuffleArray(chars);
+          while(shuffledChars.join('') === word.en && word.en.length > 1) {
+            shuffledChars = shuffleArray(chars);
+          }
+          setScrambleTiles(shuffledChars.map((char, index) => ({ id: index, char, selectedIndex: null })));
+          setSpellingInput('');
+        } else if (mode === 'spelling') {
+          setSpellingInput('');
+          setTimeout(() => inputRef.current?.focus(), 100);
+          speakWord(word.en);
+        }
+      };
+
+      const handleAnswer = (answer, isTimeout = false) => {
+        if (feedback !== null) return; 
+        
+        const currentWord = gameWords[currentIndex];
+        let isCorrect = false;
+
+        if (!isTimeout) {
+          if (selectedMode === 'recognition') {
+            setShotAnswer(answer); 
+            isCorrect = answer === currentWord.en;
+          } else {
+            isCorrect = answer.trim().toLowerCase() === currentWord.en.toLowerCase();
+          }
+        }
+
+        if (isCorrect) {
+          const timeBonus = Math.floor(timeLeft / 10); 
+          const comboBonus = combo * 5; 
+          setScore(s => s + 10 + timeBonus + comboBonus);
+          setCombo(c => c + 1);
+          setFeedback('correct');
+          speakWord(currentWord.en);
+        } else {
+          setLives(l => l - 1);
+          setCombo(0);
+          setFeedback(isTimeout ? 'timeout' : 'wrong');
+          setWrongWords(prev => {
+            if (!prev.includes(currentWord)) {
+              return [...prev, currentWord];
+            }
+            return prev;
+          });
+        }
+
+        setTimeout(() => {
+          setLives((currentLives) => {
+            if (currentLives <= 0) {
+              handleGameOver();
+              return 0;
+            } else {
+              if (currentIndex + 1 < gameWords.length) {
+                setCurrentIndex(i => i + 1);
+                setupQuestion(gameWords[currentIndex + 1], selectedMode, gameWords);
+              } else {
+                handleGameOver();
+              }
+              return currentLives;
+            }
+          });
+        }, 1500);
+      };
+
+      // 遊戲結算與進度儲存
+      const handleGameOver = () => {
+         // 計算獲得星數: 3血=3星, 2血=2星, 1血=1星, 0血=0星
+         const earnedStars = lives > 0 ? lives : 0;
+         
+         const newProgress = {...progress};
+         newProgress.totalScore += score;
+         
+         // 紀錄各課星數 (只保留最高星數)
+         const lessonKey = `L${selectedLesson}_${selectedMode}`;
+         const previousStars = newProgress.lessonStars[lessonKey] || 0;
+         
+         if (earnedStars > previousStars) {
+            newProgress.lessonStars[lessonKey] = earnedStars;
+            // 增加總星數差額
+            newProgress.totalStars += (earnedStars - previousStars);
+         }
+         
+         setProgress(newProgress);
+         saveProgress(newProgress);
+         setScreen('result');
+      };
+
+      const toggleScrambleTile = (id) => {
+        if (feedback !== null || isPaused) return;
+        
+        setScrambleTiles(tiles => {
+          const clickedTile = tiles.find(t => t.id === id);
+          let newTiles;
+
+          if (clickedTile.selectedIndex !== null) {
+            newTiles = tiles.map(t => t.id === id ? { ...t, selectedIndex: null } : t);
+          } else {
+            const maxIndex = Math.max(-1, ...tiles.map(t => t.selectedIndex !== null ? t.selectedIndex : -1));
+            newTiles = tiles.map(t => t.id === id ? { ...t, selectedIndex: maxIndex + 1 } : t);
+          }
+
+          const selectedOrdered = newTiles
+            .filter(t => t.selectedIndex !== null)
+            .sort((a, b) => a.selectedIndex - b.selectedIndex);
+
+          const currentSelected = selectedOrdered.map(t => t.char).join('');
+          setSpellingInput(currentSelected);
+          
+          if (currentSelected.length === gameWords[currentIndex].en.length) {
+            handleAnswer(currentSelected);
+          }
+          return newTiles;
+        });
+      };
+
+      const fetchAiTip = async () => {
+        if (isAiLoading) return;
+        setIsAiLoading(true);
+        setAiTip(null);
+        setAiError(null);
+
+        const apiKey = ""; 
+
+        const wordsToLearn = wrongWords.length > 0
+          ? wrongWords.slice(0, 3).map(w => `${w.en}(${w.zh})`).join('、')
+          : gameWords.slice(0, 2).map(w => `${w.en}(${w.zh})`).join('、');
+
+        const promptText = `玩家剛剛完成單字遊戲。請用極具創意、熱血且幽默的方式（例如：好笑的諧音記憶法、超短的搞笑聯想情境），教國中生記住這幾個英文單字：${wordsToLearn}。請用繁體中文回答，語氣要像一個熱血的電競教練，鼓勵玩家！(限制在150字以內)`;
+
+        const payload = {
+          contents: [{ parts: [{ text: promptText }] }],
+          systemInstruction: { parts: [{ text: "你是一位充滿熱血與幽默感的國中英文教練，擅長用好笑的諧音或聯想幫助學生背單字。" }] }
+        };
+
+        let retries = 5;
+        let delay = 1000;
+        let resultText = null;
+
+        for (let i = 0; i < retries; i++) {
+          try {
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+            if (!response.ok) throw new Error('API Request Failed');
+            const data = await response.json();
+            resultText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (resultText) break;
+          } catch (error) {
+            if (i === retries - 1) {
+              setAiError('AI 教練連線超時，請稍後再試。');
+              setIsAiLoading(false);
+              return;
+            }
+            await new Promise(r => setTimeout(r, delay));
+            delay *= 2; 
+          }
+        }
+
+        if (resultText) {
+          setAiTip(resultText);
+        }
+        setIsAiLoading(false);
+      };
+
+      // 計算特定課程獲得的總星數 (最高 9 星: 3模式 x 3星)
+      const getLessonStars = (lesson) => {
+         const s1 = progress.lessonStars[`L${lesson}_recognition`] || 0;
+         const s2 = progress.lessonStars[`L${lesson}_scramble`] || 0;
+         const s3 = progress.lessonStars[`L${lesson}_spelling`] || 0;
+         return s1 + s2 + s3;
+      };
+
+      return (
+        <div className="min-h-screen bg-slate-900 text-slate-100 font-sans selection:bg-blue-500 relative">
+          
+          {/* --- 主畫面 --- */}
+          {screen === 'home' && (
+            <div className="flex flex-col items-center justify-center min-h-screen p-6 animate-in fade-in duration-500">
+              <div className="bg-slate-800 p-8 md:p-12 rounded-3xl shadow-2xl max-w-lg w-full text-center border-t-8 border-blue-500 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-full bg-blue-500/10 blur-3xl pointer-events-none"></div>
+                <BookOpen className="w-20 h-20 mx-auto text-blue-400 mb-6 relative z-10" />
+                <h1 className="text-4xl font-extrabold mb-4 text-white relative z-10">博幼 800 單</h1>
+                <h2 className="text-2xl font-bold mb-8 text-blue-400 relative z-10">單字爭霸戰</h2>
+                
+                <div className="flex justify-center gap-4 mb-8 relative z-10">
+                   <div className="bg-slate-900 px-4 py-2 rounded-xl border border-slate-700 flex items-center gap-2">
+                     <Star className="w-5 h-5 text-amber-400 fill-current" />
+                     <span className="font-bold">{progress.totalStars} 星</span>
+                   </div>
+                   <div className="bg-slate-900 px-4 py-2 rounded-xl border border-slate-700 flex items-center gap-2">
+                     <Trophy className="w-5 h-5 text-emerald-400" />
+                     <span className="font-bold">{progress.totalScore} 分</span>
+                   </div>
+                </div>
+
+                <div className="flex flex-col gap-4 relative z-10">
+                  <button 
+                    onClick={() => setScreen('lesson')}
+                    className="w-full bg-blue-600 hover:bg-blue-500 text-white text-xl font-bold py-4 px-8 rounded-2xl transition-all transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(37,99,235,0.4)]"
+                  >
+                    <Play className="fill-current" /> 開始挑戰
+                  </button>
+                  <button 
+                    onClick={() => setScreen('profile')}
+                    className="w-full bg-slate-700 hover:bg-slate-600 text-white text-lg font-bold py-4 px-8 rounded-2xl transition-all flex items-center justify-center gap-2"
+                  >
+                    <User className="w-5 h-5" /> 玩家紀錄
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* --- 玩家紀錄 (Profile) --- */}
+          {screen === 'profile' && (
+            <div className="max-w-4xl mx-auto p-6 pt-12 animate-in slide-in-from-bottom-8 duration-500">
+               <button onClick={() => setScreen('home')} className="mb-6 text-slate-400 hover:text-white flex items-center gap-2 font-semibold bg-slate-800 px-4 py-2 rounded-lg transition-colors">
+                 <ArrowLeft className="w-5 h-5" /> 返回首頁
+               </button>
+               
+               <div className="bg-slate-800 rounded-3xl p-8 border border-slate-700 shadow-2xl relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                  
+                  <div className="flex items-center gap-4 mb-8">
+                     <div className="bg-blue-600 p-4 rounded-2xl shadow-lg shadow-blue-500/30">
+                        <Medal className="w-10 h-10 text-white" />
+                     </div>
+                     <div>
+                        <h2 className="text-3xl font-extrabold text-white">生涯成就</h2>
+                        <p className="text-slate-400">努力背單字的證明都在這裡</p>
+                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+                     <div className="bg-slate-900 p-6 rounded-2xl border border-slate-700 flex items-center justify-between">
+                        <div>
+                           <p className="text-slate-400 font-bold mb-1">累積總分</p>
+                           <p className="text-4xl font-black text-white">{progress.totalScore}</p>
+                        </div>
+                        <Trophy className="w-12 h-12 text-emerald-400 opacity-80" />
+                     </div>
+                     <div className="bg-slate-900 p-6 rounded-2xl border border-slate-700 flex items-center justify-between">
+                        <div>
+                           <p className="text-slate-400 font-bold mb-1">獲得星星</p>
+                           <p className="text-4xl font-black text-amber-400">{progress.totalStars} <span className="text-lg text-slate-500">/ 360</span></p>
+                        </div>
+                        <Star className="w-12 h-12 text-amber-400 fill-current opacity-80" />
+                     </div>
+                  </div>
+
+                  <h3 className="text-xl font-bold text-white mb-4 border-b border-slate-700 pb-2">各課星級進度</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-64 overflow-y-auto custom-scrollbar pr-2">
+                     {Object.keys(vocabularyData).map(lesson => {
+                        const stars = getLessonStars(lesson);
+                        return (
+                           <div key={lesson} className="bg-slate-900 p-3 rounded-xl border border-slate-700 flex flex-col items-center">
+                              <span className="text-slate-400 font-bold text-sm mb-1">Lesson {lesson}</span>
+                              <div className="flex gap-1">
+                                 {stars > 0 
+                                    ? <span className="text-amber-400 font-bold">{stars} ⭐</span> 
+                                    : <span className="text-slate-600">-</span>}
+                              </div>
+                           </div>
+                        )
+                     })}
+                  </div>
+               </div>
+            </div>
+          )}
+
+          {/* --- 選擇課程 (完整 40 課滾動式版面) --- */}
+          {screen === 'lesson' && (
+            <div className="max-w-5xl mx-auto p-4 pt-10 h-screen flex flex-col animate-in slide-in-from-bottom-8 duration-500">
+              <div className="flex-shrink-0">
+                <button onClick={() => setScreen('home')} className="mb-4 text-slate-400 hover:text-white flex items-center gap-2 font-semibold bg-slate-800 px-4 py-2 rounded-lg transition-colors w-fit">
+                  <ArrowLeft className="w-5 h-5" /> 返回首頁
+                </button>
+                <div className="flex justify-between items-end mb-6">
+                  <h2 className="text-3xl font-extrabold text-white flex items-center gap-3">
+                    <BookOpen className="text-blue-500"/> 選擇課程 
+                  </h2>
+                  <div className="text-amber-400 font-bold bg-slate-800 px-3 py-1 rounded-lg border border-slate-700 flex items-center gap-1">
+                     <Star className="w-4 h-4 fill-current"/> {progress.totalStars}
+                  </div>
+                </div>
+              </div>
+              
+              {/* 滾動區域 */}
+              <div className="flex-1 overflow-y-auto pr-2 pb-10 custom-scrollbar">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                  {Object.keys(vocabularyData).map(lesson => {
+                     const stars = getLessonStars(lesson);
+                     return (
+                        <button
+                          key={lesson}
+                          onClick={() => {
+                            setSelectedLesson(lesson);
+                            setScreen('mode');
+                          }}
+                          className="bg-slate-800 hover:bg-slate-700 border-2 border-slate-700 hover:border-blue-500 text-slate-200 py-5 px-3 rounded-2xl font-bold text-lg transition-all shadow-sm hover:shadow-blue-500/20 flex flex-col items-center gap-2 transform hover:-translate-y-1 relative"
+                        >
+                          <div className="bg-blue-900/50 text-blue-400 w-10 h-10 rounded-full flex items-center justify-center text-xl shadow-inner mb-1">
+                            {lesson}
+                          </div>
+                          Lesson {lesson}
+                          {/* 顯示該課獲得的星數 */}
+                          {stars > 0 && (
+                             <div className="absolute top-2 right-2 flex text-amber-400 text-xs gap-0.5">
+                               {stars} ⭐
+                             </div>
+                          )}
+                        </button>
+                     )
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* --- 選擇模式 --- */}
+          {screen === 'mode' && (
+            <div className="max-w-4xl mx-auto p-6 pt-12 animate-in slide-in-from-right-8 duration-300">
+              <button onClick={() => setScreen('lesson')} className="mb-6 text-slate-400 hover:text-white flex items-center gap-2 font-semibold bg-slate-800 px-4 py-2 rounded-lg transition-colors">
+                <ArrowLeft className="w-5 h-5"/> 重新選擇課程
+              </button>
+              <div className="mb-8">
+                <h2 className="text-3xl font-extrabold text-white mb-2 flex items-center gap-3">
+                  <Zap className="text-amber-400" /> Lesson {selectedLesson} 挑戰模式
+                </h2>
+                <p className="text-slate-400 text-lg">系統將隨機抽出 20 題，小心別把愛心扣光了！</p>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {[
+                  { id: 'recognition', icon: MousePointerClick, title: '認讀挑戰', desc: '看到中文，擊毀入侵的英文幽浮。', color: 'emerald', stars: progress.lessonStars[`L${selectedLesson}_recognition`] || 0 },
+                  { id: 'scramble', icon: Shuffle, title: '字母重組', desc: '將打散的字母重新排列成正確的單字。', color: 'amber', stars: progress.lessonStars[`L${selectedLesson}_scramble`] || 0 },
+                  { id: 'spelling', icon: Keyboard, title: '拼字測驗', desc: '看到中文並聽發音，完整拼出英文字。', color: 'indigo', stars: progress.lessonStars[`L${selectedLesson}_spelling`] || 0 }
+                ].map(m => (
+                   <button key={m.id} onClick={() => startGame(m.id)} className={`bg-slate-800 border-2 border-slate-700 hover:border-${m.color}-500 group p-8 rounded-3xl text-left transition-all shadow-lg hover:shadow-${m.color}-500/20 hover:-translate-y-2 relative overflow-hidden`}>
+                     <div className="absolute top-4 right-6 flex gap-1">
+                        {Array.from({length: 3}).map((_, i) => (
+                           <Star key={i} className={`w-5 h-5 ${i < m.stars ? 'text-amber-400 fill-current drop-shadow-[0_0_5px_rgba(251,191,36,0.8)]' : 'text-slate-600'}`} />
+                        ))}
+                     </div>
+                     <div className={`bg-${m.color}-500/20 p-4 rounded-2xl w-fit mb-6 text-${m.color}-400 group-hover:bg-${m.color}-500 group-hover:text-white transition-colors`}>
+                       <m.icon className="w-8 h-8" />
+                     </div>
+                     <h3 className="text-2xl font-bold mb-2 text-white">{m.title}</h3>
+                     <p className="text-slate-400">{m.desc}</p>
+                   </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* --- 遊戲進行中 --- */}
+          {screen === 'game' && (
+            <div className="max-w-4xl mx-auto p-4 md:p-6 min-h-screen flex flex-col">
+              
+              {/* HUD (遊戲狀態列) */}
+              <div className="bg-slate-800 p-4 rounded-2xl shadow-lg border border-slate-700 flex flex-wrap justify-between items-center mb-6 gap-4">
+                
+                {/* 左側：暫停與返回 */}
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setScreen('mode')} 
+                    className="p-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-slate-300 hover:text-white transition-colors"
+                    title="返回上一頁"
+                  >
+                    <ArrowLeft className="w-6 h-6" />
+                  </button>
+                  <button 
+                    onClick={() => setIsPaused(true)} 
+                    className="p-2 bg-slate-700 hover:bg-blue-600 rounded-lg text-slate-300 hover:text-white transition-colors"
+                    title="暫停遊戲"
+                  >
+                    <Pause className="w-6 h-6" />
+                  </button>
+                </div>
+
+                {/* 中間：分數與連擊 */}
+                <div className="flex items-center gap-6 font-mono">
+                  <div className="flex flex-col items-center">
+                    <span className="text-slate-400 text-xs uppercase font-bold">Score</span>
+                    <span className="text-2xl font-black text-blue-400">{score}</span>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <span className="text-slate-400 text-xs uppercase font-bold">Combo</span>
+                    <span className={`text-2xl font-black flex items-center ${combo > 0 ? 'text-amber-400' : 'text-slate-600'}`}>
+                      <Zap className={`w-5 h-5 mr-1 ${combo > 0 ? 'fill-current' : ''}`} /> {combo}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 右側：生命值 HP */}
+                <div className="flex gap-1 bg-slate-900 p-2 rounded-xl border border-slate-700">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Heart 
+                      key={i} 
+                      className={`w-8 h-8 transition-all duration-300 ${
+                        i < lives 
+                          ? 'text-rose-500 fill-current drop-shadow-[0_0_8px_rgba(244,63,94,0.6)]' 
+                          : 'text-slate-700'
+                      }`} 
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* 計時條 */}
+              <div className="w-full bg-slate-800 rounded-full h-4 mb-8 overflow-hidden border border-slate-700 relative">
+                <div 
+                  className={`h-full rounded-full transition-all duration-100 ease-linear ${
+                    timeLeft > 50 ? 'bg-emerald-500' : timeLeft > 25 ? 'bg-amber-500' : 'bg-rose-500'
+                  }`} 
+                  style={{ width: `${(timeLeft / 100) * 100}%` }}
+                ></div>
+                <Clock className="w-4 h-4 absolute top-0 left-1/2 -translate-x-1/2 text-white/50" />
+              </div>
+
+              {/* 題目區 */}
+              <div className="flex-1 flex flex-col items-center justify-center bg-slate-800/50 rounded-3xl p-6 md:p-10 border border-slate-700/50 relative overflow-hidden">
+                
+                <div className="absolute top-4 right-6 text-slate-500 font-bold tracking-widest text-sm z-20">
+                  {currentIndex + 1} / {gameWords.length}
+                </div>
+                
+                {/* 戰爭模式下隱藏原本的標題，改由防禦塔顯示 */}
+                {selectedMode !== 'recognition' && (
+                  <>
+                    <h2 className={`text-5xl md:text-7xl font-black text-white mb-8 text-center break-words transition-transform ${
+                      feedback === 'wrong' || feedback === 'timeout' ? 'animate-shake text-rose-400' : ''
+                    }`}>
+                      {gameWords[currentIndex]?.zh}
+                    </h2>
+
+                    {/* 提示發音按鈕 */}
+                    <button 
+                      onClick={() => speakWord(gameWords[currentIndex].en)}
+                      className="mb-10 flex items-center gap-2 text-blue-400 hover:text-blue-300 bg-blue-900/30 border border-blue-800/50 px-6 py-2 rounded-full font-semibold transition-colors"
+                    >
+                      <Volume2 className="w-5 h-5" /> 聆聽發音
+                    </button>
+                  </>
+                )}
+
+                {/* 互動介面 */}
+                <div className="w-full max-w-2xl">
+                  
+                  {/* 模式 1：認讀 (戰爭防禦遊戲) */}
+                  {selectedMode === 'recognition' && (
+                    <div className="relative w-full h-[400px] md:h-[450px] bg-slate-900 overflow-hidden border-2 border-slate-700 rounded-3xl shadow-inner mt-2">
+                      {/* 星空背景 */}
+                      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-800 via-slate-900 to-black opacity-80"></div>
+                      
+                      {/* 敵人 (選項 UFO) */}
+                      {options.map((opt, i) => {
+                        const dropPercentage = Math.max(0, Math.min(85, ((100 - timeLeft) / 100) * 85));
+                        const isShot = shotAnswer === opt.en;
+                        const isCorrect = opt.en === gameWords[currentIndex].en;
+                        
+                        let enemyState = "alive";
+                        if (feedback) {
+                          if (isCorrect && (feedback === 'correct' || feedback === 'timeout')) enemyState = "destroyed";
+                          else if (isShot && feedback === 'wrong') enemyState = "shielded"; 
+                        }
+
+                        return (
+                          <button
+                            key={i}
+                            onClick={() => handleAnswer(opt.en)}
+                            disabled={feedback !== null || isPaused}
+                            className={`absolute transform -translate-x-1/2 flex flex-col items-center transition-all duration-200 z-10 ${
+                              enemyState === 'destroyed' ? 'scale-150 opacity-0 duration-500' :
+                              enemyState === 'shielded' ? 'animate-shake' : 'hover:scale-110 hover:-translate-y-2'
+                            }`}
+                            style={{
+                              left: `${12.5 + i * 25}%`,
+                              top: `${dropPercentage}%`,
+                            }}
+                          >
+                            {enemyState === 'destroyed' ? (
+                              <div className="w-20 h-20 bg-orange-500 rounded-full blur-xl animate-pulse"></div> 
+                            ) : (
+                              <>
+                                <div className={`w-14 h-14 mb-2 rounded-full flex items-center justify-center border-2 transition-colors ${
+                                  enemyState === 'shielded' ? 'bg-rose-900 border-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.6)]' : 'bg-slate-800 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.5)]'
+                                }`}>
+                                  {enemyState === 'shielded' ? <Shield className="w-8 h-8 text-rose-500" /> : <Rocket className="w-8 h-8 text-amber-400 transform rotate-180" />}
+                                </div>
+                                <span className={`bg-slate-900 text-white font-bold px-3 py-1 rounded-lg border shadow-md text-sm md:text-lg transition-colors ${
+                                  enemyState === 'shielded' ? 'border-rose-500 text-rose-300' : 'border-slate-600'
+                                }`}>
+                                  {opt.en}
+                                </span>
+                              </>
+                            )}
+                            
+                            {/* 雷射光束特效 */}
+                            {isShot && enemyState !== 'destroyed' && (
+                              <div className="absolute top-16 w-2 h-[500px] bg-rose-500 shadow-[0_0_15px_#f43f5e] origin-top animate-pulse -z-10"></div>
+                            )}
+                            {isShot && enemyState === 'destroyed' && (
+                              <div className="absolute top-16 w-3 h-[500px] bg-blue-400 shadow-[0_0_20px_#60a5fa] origin-top animate-pulse -z-10"></div>
+                            )}
+                          </button>
+                        )
+                      })}
+
+                      {/* 玩家基地 (防禦塔) */}
+                      <div className="absolute bottom-0 left-0 w-full flex flex-col items-center z-20 pointer-events-none">
+                        <div className={`w-full h-1 blur-sm mb-1 ${feedback === 'wrong' || feedback === 'timeout' ? 'bg-rose-500/80' : 'bg-blue-500/30'}`}></div>
+                        <div className={`w-4/5 md:w-3/5 px-6 py-4 rounded-t-3xl border-t-4 border-l-4 border-r-4 flex flex-col items-center justify-center transition-colors duration-300 ${
+                          feedback === 'wrong' || feedback === 'timeout' ? 'bg-rose-950/90 border-rose-600 shadow-[0_-10px_30px_rgba(225,29,72,0.4)]' : 
+                          feedback === 'correct' ? 'bg-emerald-950/90 border-emerald-500 shadow-[0_-10px_30px_rgba(16,185,129,0.4)]' : 'bg-blue-950/90 border-blue-600 shadow-[0_-10px_30px_rgba(37,99,235,0.4)]'
+                        }`}>
+                           <Crosshair className={`w-8 h-8 mb-2 animate-pulse ${
+                             feedback === 'wrong' || feedback === 'timeout' ? 'text-rose-500' :
+                             feedback === 'correct' ? 'text-emerald-400' : 'text-blue-400'
+                           }`} />
+                           <span className="text-3xl md:text-5xl font-black text-white tracking-widest drop-shadow-lg">
+                             {gameWords[currentIndex]?.zh}
+                           </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 模式 2：字母重組 */}
+                  {selectedMode === 'scramble' && (
+                    <div className="flex flex-col items-center w-full">
+                      {/* 作答區 */}
+                      <div className="flex flex-wrap justify-center gap-2 mb-8 min-h-[72px] p-4 bg-slate-900 rounded-2xl shadow-inner w-full border-2 border-slate-700">
+                        {scrambleTiles.filter(t => t.selectedIndex !== null).sort((a, b) => a.selectedIndex - b.selectedIndex).map((t) => (
+                          <button
+                            key={t.id}
+                            onClick={() => toggleScrambleTile(t.id)}
+                            disabled={feedback !== null || isPaused}
+                            className="w-12 h-12 md:w-14 md:h-14 bg-blue-600 text-white rounded-xl text-2xl font-bold flex items-center justify-center transform transition-transform hover:scale-105 shadow-[0_4px_0_rgb(37,99,235)]"
+                          >
+                            {t.char}
+                          </button>
+                        ))}
+                        {scrambleTiles.filter(t => t.selectedIndex !== null).length === 0 && (
+                          <span className="text-slate-500 font-medium my-auto text-lg">點擊下方字母來拼字</span>
+                        )}
+                      </div>
+                      
+                      {/* 字母池 */}
+                      <div className="flex flex-wrap justify-center gap-3">
+                        {scrambleTiles.map((t) => (
+                          <button
+                            key={t.id}
+                            onClick={() => toggleScrambleTile(t.id)}
+                            disabled={t.selectedIndex !== null || feedback !== null || isPaused}
+                            className={`w-12 h-12 md:w-14 md:h-14 rounded-xl text-2xl font-bold flex items-center justify-center transition-all ${
+                              t.selectedIndex !== null 
+                                ? 'bg-slate-800 text-slate-700 shadow-none border-2 border-slate-700 border-dashed' 
+                                : 'bg-slate-700 text-white border-2 border-slate-600 hover:border-amber-400 hover:text-amber-400 shadow-[0_4px_0_rgb(71,85,105)] hover:-translate-y-1'
+                            }`}
+                          >
+                            {t.selectedIndex !== null ? '' : t.char}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 模式 3：拼字 */}
+                  {selectedMode === 'spelling' && (
+                    <div className="w-full flex flex-col gap-4">
+                      <form 
+                        onSubmit={(e) => { e.preventDefault(); handleAnswer(spellingInput); }}
+                        className="w-full relative"
+                      >
+                        <input
+                          ref={inputRef}
+                          type="text"
+                          value={spellingInput}
+                          onChange={(e) => setSpellingInput(e.target.value)}
+                          disabled={feedback !== null || isPaused}
+                          placeholder={`請拼出英文 (${gameWords[currentIndex]?.en.length} 個字母)`}
+                          className="w-full text-center text-3xl font-bold p-6 rounded-2xl bg-slate-900 border-4 border-slate-700 text-white focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/20 transition-all shadow-inner"
+                          autoComplete="off"
+                          spellCheck="false"
+                        />
+                        <button 
+                          type="submit"
+                          disabled={!spellingInput || feedback !== null || isPaused}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 text-white p-3 rounded-xl transition-colors shadow-md"
+                        >
+                          <ArrowRight className="w-6 h-6" />
+                        </button>
+                      </form>
+                      <p className="text-center text-slate-500 font-medium">輸入完畢請按 Enter 鍵送出</p>
+                    </div>
+                  )}
+                  
+                </div>
+                
+                {/* 答題回饋 (O/X) */}
+                <div className={`mt-8 min-h-[64px] flex items-center justify-center w-full max-w-lg rounded-2xl ${
+                    feedback === 'correct' ? 'bg-emerald-900/50 text-emerald-400 border border-emerald-500/50' :
+                    feedback === 'wrong' || feedback === 'timeout' ? 'bg-rose-900/50 text-rose-400 border border-rose-500/50' : 'opacity-0'
+                  } transition-opacity duration-300 p-4`}
+                >
+                  {feedback === 'correct' && (
+                    <div className="flex items-center gap-2 text-xl font-bold">
+                      <Check className="w-8 h-8" /> 答對了！太厲害了！
+                    </div>
+                  )}
+                  {feedback === 'timeout' && (
+                    <div className="flex items-center gap-2 text-xl font-bold">
+                      <Clock className="w-8 h-8" /> 時間到！正確答案是：<span className="text-2xl underline ml-1 text-white">{gameWords[currentIndex].en}</span>
+                    </div>
+                  )}
+                  {feedback === 'wrong' && (
+                    <div className="flex items-center gap-2 text-xl font-bold">
+                      <X className="w-8 h-8" /> 哎呀，答錯了。正確答案是：<span className="text-2xl underline ml-1 text-white">{gameWords[currentIndex].en}</span>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            </div>
+          )}
+
+          {/* --- 暫停選單 (Overlay) --- */}
+          {isPaused && (
+            <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center animate-in fade-in">
+              <div className="bg-slate-800 p-8 rounded-3xl border-2 border-slate-600 shadow-2xl max-w-sm w-full text-center">
+                <Pause className="w-16 h-16 text-blue-500 mx-auto mb-4" />
+                <h2 className="text-3xl font-extrabold text-white mb-8">遊戲暫停</h2>
+                <div className="flex flex-col gap-4">
+                  <button 
+                    onClick={() => {
+                      setIsPaused(false);
+                      if(selectedMode === 'spelling') setTimeout(() => inputRef.current?.focus(), 100);
+                    }}
+                    className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg"
+                  >
+                    <Play className="w-5 h-5" /> 繼續遊戲
+                  </button>
+                  <button 
+                    onClick={() => setScreen('mode')}
+                    className="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all"
+                  >
+                    <ArrowLeft className="w-5 h-5" /> 返回選單
+                  </button>
+                  <button 
+                    onClick={() => setScreen('home')}
+                    className="w-full bg-transparent border-2 border-slate-600 hover:border-slate-500 text-slate-300 hover:text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all"
+                  >
+                    <Home className="w-5 h-5" /> 回到首頁
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* --- 結果結算畫面 --- */}
+          {screen === 'result' && (
+            <div className="flex flex-col items-center justify-center min-h-screen p-6 animate-in zoom-in-95 duration-500">
+              <div className="bg-slate-800 p-8 md:p-12 rounded-3xl shadow-2xl max-w-md w-full text-center border-t-8 border-amber-400 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-full bg-amber-500/10 blur-3xl pointer-events-none"></div>
+                
+                <h2 className="text-4xl font-extrabold mb-2 text-white relative z-10">
+                  {lives > 0 ? '挑戰完成！' : 'Game Over'}
+                </h2>
+                <p className="text-slate-400 mb-8 font-medium relative z-10">Lesson {selectedLesson} - {
+                  selectedMode === 'recognition' ? '認讀挑戰' : 
+                  selectedMode === 'scramble' ? '字母重組' : '拼字測驗'
+                }</p>
+                
+                {/* 分數面板 */}
+                <div className="bg-slate-900 rounded-3xl w-full py-8 mb-8 border border-slate-700 shadow-inner relative z-10 flex flex-col items-center">
+                  <span className="text-slate-400 uppercase font-bold tracking-widest mb-2">本次得分</span>
+                  <span className="text-7xl font-black text-amber-400 drop-shadow-[0_0_15px_rgba(251,191,36,0.4)]">{score}</span>
+                  
+                  <div className="flex justify-center gap-2 mt-6 border-t border-slate-700 pt-4 w-4/5 mx-auto">
+                     {/* 獲得星數計算 */}
+                     {Array.from({ length: 3 }).map((_, i) => (
+                       <Star 
+                         key={i} 
+                         className={`w-8 h-8 ${i < (lives > 0 ? lives : 0) ? 'text-amber-400 fill-current drop-shadow-[0_0_10px_rgba(251,191,36,0.8)]' : 'text-slate-700'}`} 
+                       />
+                     ))}
+                  </div>
+                </div>
+                
+                <p className="text-xl font-bold text-slate-300 mb-8 relative z-10">
+                  {lives === 3 ? '🎉 完美通關！獲得 3 顆星！' :
+                   lives > 0 ? `🔥 表現不錯！獲得 ${lives} 顆星！` :
+                   '💀 愛心歸零了！繼續練習一定能過關！'}
+                </p>
+
+                {/* ✨ AI 記憶教練區塊 */}
+                <div className="w-full bg-slate-900 border-2 border-indigo-500/50 rounded-2xl p-6 mb-8 relative z-10 text-left shadow-[0_0_20px_rgba(99,102,241,0.2)]">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="bg-indigo-500 p-2 rounded-xl">
+                      <Bot className="w-6 h-6 text-white" />
+                    </div>
+                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-indigo-400" /> AI 專屬記憶教練
+                    </h3>
+                  </div>
+                  
+                  {aiTip ? (
+                    <div className="bg-slate-800 p-4 rounded-xl border border-indigo-500/30 animate-in fade-in zoom-in-95 duration-500">
+                      <p className="text-slate-200 leading-relaxed whitespace-pre-wrap font-medium">{aiTip}</p>
+                    </div>
+                  ) : aiError ? (
+                    <div className="bg-rose-900/50 p-4 rounded-xl border border-rose-500/30">
+                      <p className="text-rose-300">{aiError}</p>
+                    </div>
+                  ) : (
+                    <p className="text-slate-400 mb-4">
+                      {wrongWords.length > 0 
+                        ? `教練發現你在 ${wrongWords.map(w=>w.en).slice(0,3).join(', ')} 等單字遇到了困難。`
+                        : '太神啦！全部答對！想聽聽教練分享單字冷知識嗎？'}
+                    </p>
+                  )}
+
+                  {!aiTip && !isAiLoading && (
+                    <button 
+                      onClick={fetchAiTip}
+                      className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 transform hover:scale-[1.02] active:scale-95"
+                    >
+                      <Sparkles className="w-5 h-5" /> 呼叫教練傳授秘訣
+                    </button>
+                  )}
+                  
+                  {isAiLoading && (
+                    <button disabled className="w-full bg-indigo-600/50 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 cursor-not-allowed">
+                      <Loader2 className="w-5 h-5 animate-spin" /> 教練正在為你構思專屬記憶法...
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-3 relative z-10">
+                  <button 
+                    onClick={() => startGame(selectedMode)}
+                    className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-6 rounded-2xl transition-all flex items-center justify-center gap-2 shadow-lg"
+                  >
+                    <RotateCcw className="w-5 h-5" /> 再玩一次
+                  </button>
+                  <button 
+                    onClick={() => setScreen('mode')}
+                    className="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-4 px-6 rounded-2xl transition-all"
+                  >
+                    選擇其他模式
+                  </button>
+                  <button 
+                    onClick={() => setScreen('lesson')}
+                    className="w-full text-slate-500 hover:text-white font-semibold py-3 transition-colors"
+                  >
+                    返回課程列表
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* 搖晃與滾動條動畫設定 */}
+          <style dangerouslySetInnerHTML={{__html: `
+            @keyframes shake {
+              0%, 100% { transform: translateX(0); }
+              25% { transform: translateX(-10px); }
+              50% { transform: translateX(10px); }
+              75% { transform: translateX(-10px); }
+            }
+            .animate-shake {
+              animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+            }
+            .custom-scrollbar::-webkit-scrollbar {
+              width: 8px;
+            }
+            .custom-scrollbar::-webkit-scrollbar-track {
+              background: #1e293b;
+              border-radius: 10px;
+            }
+            .custom-scrollbar::-webkit-scrollbar-thumb {
+              background: #3b82f6;
+              border-radius: 10px;
+            }
+            .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+              background: #60a5fa;
+            }
+          `}} />
+        </div>
+      );
+    }
+
+    const root = createRoot(document.getElementById('root'));
+    root.render(<BoyoGameApp />);
+  </script>
+</body>
+</html>
