@@ -31,7 +31,7 @@
   <script type="text/babel" data-type="module">
     import React, { useState, useEffect, useRef } from 'react';
     import { createRoot } from 'react-dom/client';
-    import { Play, BookOpen, Keyboard, MousePointerClick, Shuffle, Volume2, ArrowRight, RotateCcw, Check, X, Heart, Pause, Zap, Clock, ArrowLeft, Home, Rocket, Crosshair, Shield, Sparkles, Bot, Loader2 } from 'lucide-react';
+    import { Play, BookOpen, Keyboard, MousePointerClick, Shuffle, Volume2, ArrowRight, RotateCcw, Check, X, Heart, Pause, Zap, Clock, ArrowLeft, Home, Rocket, Crosshair, Shield, Sparkles, Bot, LogOut } from 'https://esm.sh/lucide-react@0.292.0';
 
     // --- 嚴格按照使用者提供之 L1 ~ L40 全新單字表 ---
     const vocabularyData = {
@@ -448,9 +448,6 @@
       const inputRef = useRef(null);
 
       const [wrongWords, setWrongWords] = useState([]);
-      const [aiTip, setAiTip] = useState(null);
-      const [isAiLoading, setIsAiLoading] = useState(false);
-      const [aiError, setAiError] = useState(null);
 
       useEffect(() => {
         let timer;
@@ -480,8 +477,6 @@
         setFeedback(null);
         setShotAnswer(null);
         setWrongWords([]); 
-        setAiTip(null); 
-        setAiError(null);
         setIsPaused(false);
         setupQuestion(words[0], mode, words);
         setScreen('game');
@@ -593,57 +588,6 @@
         });
       };
 
-      const fetchAiTip = async () => {
-        if (isAiLoading) return;
-        setIsAiLoading(true);
-        setAiTip(null);
-        setAiError(null);
-
-        const apiKey = ""; 
-
-        const wordsToLearn = wrongWords.length > 0
-          ? wrongWords.slice(0, 3).map(w => `${w.en}(${w.zh})`).join('、')
-          : gameWords.slice(0, 2).map(w => `${w.en}(${w.zh})`).join('、');
-
-        const promptText = `玩家剛剛完成單字遊戲。請用極具創意、熱血且幽默的方式（例如：好笑的諧音記憶法、超短的搞笑聯想情境），教國中生記住這幾個英文單字：${wordsToLearn}。請用繁體中文回答，語氣要像一個熱血的電競教練，鼓勵玩家！(限制在150字以內)`;
-
-        const payload = {
-          contents: [{ parts: [{ text: promptText }] }],
-          systemInstruction: { parts: [{ text: "你是一位充滿熱血與幽默感的國中英文教練，擅長用好笑的諧音或聯想幫助學生背單字。" }] }
-        };
-
-        let retries = 5;
-        let delay = 1000;
-        let resultText = null;
-
-        for (let i = 0; i < retries; i++) {
-          try {
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload)
-            });
-            if (!response.ok) throw new Error('API Request Failed');
-            const data = await response.json();
-            resultText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (resultText) break;
-          } catch (error) {
-            if (i === retries - 1) {
-              setAiError('AI 教練正在訓練其他選手，連線超時！請稍後再試。');
-              setIsAiLoading(false);
-              return;
-            }
-            await new Promise(r => setTimeout(r, delay));
-            delay *= 2; 
-          }
-        }
-
-        if (resultText) {
-          setAiTip(resultText);
-        }
-        setIsAiLoading(false);
-      };
-
       return (
         <div className="min-h-screen bg-slate-900 text-slate-100 font-sans selection:bg-blue-500 relative">
           
@@ -660,7 +604,7 @@
                 </p>
                 <button 
                   onClick={() => setScreen('lesson')}
-                  className="w-full bg-blue-600 hover:bg-blue-500 text-white text-xl font-bold py-4 px-8 rounded-2xl transition-all transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(37,99,235,0.4)] relative z-10"
+                  className="w-full bg-blue-600 hover:bg-blue-500 text-white text-xl font-bold py-4 px-8 rounded-2xl transition-all transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2 relative z-10"
                 >
                   <Play className="fill-current" /> 開始挑戰
                 </button>
@@ -672,7 +616,7 @@
           {screen === 'lesson' && (
             <div className="max-w-5xl mx-auto p-4 pt-10 h-screen flex flex-col animate-in slide-in-from-bottom-8 duration-500">
               <div className="flex-shrink-0">
-                <button onClick={() => setScreen('home')} className="mb-4 text-slate-400 hover:text-white flex items-center gap-2 font-semibold bg-slate-800 px-4 py-2 rounded-lg transition-colors w-fit">
+                <button onClick={() => setScreen('home')} className="mb-4 text-slate-400 hover:text-white flex items-center gap-2 font-semibold bg-slate-800 px-4 py-2 rounded-lg transition-colors">
                   <ArrowLeft className="w-5 h-5" /> 返回首頁
                 </button>
                 <h2 className="text-3xl font-extrabold mb-6 text-white flex items-center gap-3">
@@ -690,7 +634,7 @@
                         setSelectedLesson(lesson);
                         setScreen('mode');
                       }}
-                      className="bg-slate-800 hover:bg-slate-700 border-2 border-slate-700 hover:border-blue-500 text-slate-200 py-5 px-3 rounded-2xl font-bold text-lg transition-all shadow-sm hover:shadow-blue-500/20 flex flex-col items-center gap-2 transform hover:-translate-y-1"
+                      className="bg-slate-800 hover:bg-slate-700 border-2 border-slate-700 hover:border-blue-500 text-slate-200 py-5 px-3 rounded-2xl font-bold text-lg transition-all shadow-sm hover:shadow-lg active:scale-95"
                     >
                       <div className="bg-blue-900/50 text-blue-400 w-10 h-10 rounded-full flex items-center justify-center text-xl shadow-inner mb-1">
                         {lesson}
@@ -717,7 +661,7 @@
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <button onClick={() => startGame('recognition')} className="bg-slate-800 border-2 border-slate-700 hover:border-emerald-500 group p-8 rounded-3xl text-left transition-all shadow-lg hover:shadow-emerald-500/20 hover:-translate-y-2 relative overflow-hidden">
+                <button onClick={() => startGame('recognition')} className="bg-slate-800 border-2 border-slate-700 hover:border-emerald-500 group p-8 rounded-3xl text-left transition-all shadow-lg hover:shadow-xl active:scale-95">
                   <div className="bg-emerald-500/20 p-4 rounded-2xl w-fit mb-6 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
                     <MousePointerClick className="w-8 h-8" />
                   </div>
@@ -725,7 +669,7 @@
                   <p className="text-slate-400">看到中文，擊毀入侵的英文幽浮。體驗刺激的防禦戰！</p>
                 </button>
                 
-                <button onClick={() => startGame('scramble')} className="bg-slate-800 border-2 border-slate-700 hover:border-amber-500 group p-8 rounded-3xl text-left transition-all shadow-lg hover:shadow-amber-500/20 hover:-translate-y-2 relative overflow-hidden">
+                <button onClick={() => startGame('scramble')} className="bg-slate-800 border-2 border-slate-700 hover:border-amber-500 group p-8 rounded-3xl text-left transition-all shadow-lg hover:shadow-xl active:scale-95">
                   <div className="bg-amber-500/20 p-4 rounded-2xl w-fit mb-6 text-amber-400 group-hover:bg-amber-500 group-hover:text-white transition-colors">
                     <Shuffle className="w-8 h-8" />
                   </div>
@@ -733,7 +677,7 @@
                   <p className="text-slate-400">將打散的字母重新排列成正確的單字。鍛鍊單字結構記憶！</p>
                 </button>
 
-                <button onClick={() => startGame('spelling')} className="bg-slate-800 border-2 border-slate-700 hover:border-indigo-500 group p-8 rounded-3xl text-left transition-all shadow-lg hover:shadow-indigo-500/20 hover:-translate-y-2 relative overflow-hidden">
+                <button onClick={() => startGame('spelling')} className="bg-slate-800 border-2 border-slate-700 hover:border-indigo-500 group p-8 rounded-3xl text-left transition-all shadow-lg hover:shadow-xl active:scale-95">
                   <div className="bg-indigo-500/20 p-4 rounded-2xl w-fit mb-6 text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
                     <Keyboard className="w-8 h-8" />
                   </div>
@@ -903,7 +847,7 @@
                         <div className={`w-full h-1 blur-sm mb-1 ${feedback === 'wrong' || feedback === 'timeout' ? 'bg-rose-500/80' : 'bg-blue-500/30'}`}></div>
                         <div className={`w-4/5 md:w-3/5 px-6 py-4 rounded-t-3xl border-t-4 border-l-4 border-r-4 flex flex-col items-center justify-center transition-colors duration-300 ${
                           feedback === 'wrong' || feedback === 'timeout' ? 'bg-rose-950/90 border-rose-600 shadow-[0_-10px_30px_rgba(225,29,72,0.4)]' : 
-                          feedback === 'correct' ? 'bg-emerald-950/90 border-emerald-500 shadow-[0_-10px_30px_rgba(16,185,129,0.4)]' : 'bg-blue-950/90 border-blue-600 shadow-[0_-10px_30px_rgba(37,99,235,0.4)]'
+                          feedback === 'correct' ? 'bg-emerald-950/90 border-emerald-500 shadow-[0_-10px_30px_rgba(16,185,129,0.4)]' : 'bg-blue-950/90 border-blue-600 shadow-[0_-10px_30px_rgba(37,99,235,0.3)]'
                         }`}>
                            <Crosshair className={`w-8 h-8 mb-2 animate-pulse ${
                              feedback === 'wrong' || feedback === 'timeout' ? 'text-rose-500' :
@@ -927,7 +871,7 @@
                             key={t.id}
                             onClick={() => toggleScrambleTile(t.id)}
                             disabled={feedback !== null || isPaused}
-                            className="w-12 h-12 md:w-14 md:h-14 bg-blue-600 text-white rounded-xl text-2xl font-bold flex items-center justify-center transform transition-transform hover:scale-105 shadow-[0_4px_0_rgb(37,99,235)]"
+                            className="w-12 h-12 md:w-14 md:h-14 bg-blue-600 text-white rounded-xl text-2xl font-bold flex items-center justify-center transform transition-transform hover:scale-105 active:scale-95"
                           >
                             {t.char}
                           </button>
@@ -971,7 +915,7 @@
                           onChange={(e) => setSpellingInput(e.target.value)}
                           disabled={feedback !== null || isPaused}
                           placeholder={`請拼出英文 (${gameWords[currentIndex]?.en.length} 個字母)`}
-                          className="w-full text-center text-3xl font-bold p-6 rounded-2xl bg-slate-900 border-4 border-slate-700 text-white focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/20 transition-all shadow-inner"
+                          className="w-full text-center text-3xl font-bold p-6 rounded-2xl bg-slate-900 border-4 border-slate-700 text-white focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/50"
                           autoComplete="off"
                           spellCheck="false"
                         />
@@ -1000,184 +944,69 @@
                       <Check className="w-8 h-8" /> 答對了！太厲害了！
                     </div>
                   )}
-                  {feedback === 'timeout' && (
-                    <div className="flex items-center gap-2 text-xl font-bold">
-                      <Clock className="w-8 h-8" /> 時間到！正確答案是：<span className="text-2xl underline ml-1 text-white">{gameWords[currentIndex].en}</span>
-                    </div>
-                  )}
                   {feedback === 'wrong' && (
                     <div className="flex items-center gap-2 text-xl font-bold">
-                      <X className="w-8 h-8" /> 哎呀，答錯了。正確答案是：<span className="text-2xl underline ml-1 text-white">{gameWords[currentIndex].en}</span>
+                      <X className="w-8 h-8" /> 答錯了！正確答案是：<span className="text-white font-black">{gameWords[currentIndex]?.en}</span>
+                    </div>
+                  )}
+                  {feedback === 'timeout' && (
+                    <div className="flex items-center gap-2 text-xl font-bold">
+                      <Clock className="w-8 h-8" /> 時間到！正確答案是：<span className="text-white font-black">{gameWords[currentIndex]?.en}</span>
                     </div>
                   )}
                 </div>
-
               </div>
             </div>
           )}
 
-          {/* --- 暫停選單 (Overlay) --- */}
-          {isPaused && (
-            <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center animate-in fade-in">
-              <div className="bg-slate-800 p-8 rounded-3xl border-2 border-slate-600 shadow-2xl max-w-sm w-full text-center">
-                <Pause className="w-16 h-16 text-blue-500 mx-auto mb-4" />
-                <h2 className="text-3xl font-extrabold text-white mb-8">遊戲暫停</h2>
-                <div className="flex flex-col gap-4">
-                  <button 
-                    onClick={() => {
-                      setIsPaused(false);
-                      if(selectedMode === 'spelling') setTimeout(() => inputRef.current?.focus(), 100);
-                    }}
-                    className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg"
-                  >
-                    <Play className="w-5 h-5" /> 繼續遊戲
-                  </button>
-                  <button 
-                    onClick={() => setScreen('mode')}
-                    className="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all"
-                  >
-                    <ArrowLeft className="w-5 h-5" /> 返回選單
-                  </button>
-                  <button 
-                    onClick={() => setScreen('home')}
-                    className="w-full bg-transparent border-2 border-slate-600 hover:border-slate-500 text-slate-300 hover:text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all"
-                  >
-                    <Home className="w-5 h-5" /> 回到首頁
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* --- 結果結算畫面 --- */}
+          {/* --- 結果畫面 --- */}
           {screen === 'result' && (
-            <div className="flex flex-col items-center justify-center min-h-screen p-6 animate-in zoom-in-95 duration-500">
-              <div className="bg-slate-800 p-8 md:p-12 rounded-3xl shadow-2xl max-w-md w-full text-center border-t-8 border-amber-400 relative overflow-hidden">
+            <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-gradient-to-b from-slate-900 to-slate-800">
+              <div className="bg-slate-800 p-8 md:p-12 rounded-3xl shadow-2xl max-w-lg w-full text-center border-t-8 border-amber-500 relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-full h-full bg-amber-500/10 blur-3xl pointer-events-none"></div>
                 
-                <h2 className="text-4xl font-extrabold mb-2 text-white relative z-10">
-                  {lives > 0 ? '挑戰完成！' : 'Game Over'}
-                </h2>
-                <p className="text-slate-400 mb-8 font-medium relative z-10">Lesson {selectedLesson} - {
-                  selectedMode === 'recognition' ? '認讀挑戰' : 
-                  selectedMode === 'scramble' ? '字母重組' : '拼字測驗'
-                }</p>
+                <h1 className="text-4xl font-extrabold mb-6 text-white relative z-10">
+                  {lives > 0 ? '🎉 挑戰成功！' : '💔 挑戰失敗'}
+                </h1>
                 
-                {/* 分數面板 */}
-                <div className="bg-slate-900 rounded-3xl w-full py-8 mb-8 border border-slate-700 shadow-inner relative z-10 flex flex-col items-center">
-                  <span className="text-slate-400 uppercase font-bold tracking-widest mb-2">Final Score</span>
-                  <span className="text-7xl font-black text-amber-400 drop-shadow-[0_0_15px_rgba(251,191,36,0.4)]">{score}</span>
-                  
-                  <div className="flex justify-center gap-2 mt-6">
-                    {Array.from({ length: 3 }).map((_, i) => (
-                      <Heart 
-                        key={i} 
-                        className={`w-6 h-6 ${i < lives ? 'text-rose-500 fill-current' : 'text-slate-700'}`} 
-                      />
-                    ))}
-                  </div>
+                <div className="bg-slate-900/50 p-6 rounded-2xl mb-6 border border-slate-700 relative z-10">
+                  <p className="text-slate-400 text-sm mb-2">最終分數</p>
+                  <p className="text-5xl font-black text-blue-400">{score}</p>
                 </div>
-                
-                <p className="text-xl font-bold text-slate-300 mb-8 relative z-10">
-                  {lives === 3 ? '🎉 完美通關！一顆愛心都沒扣！' :
-                   lives > 0 ? '🔥 表現不錯！下次挑戰無傷通關！' :
-                   '💀 愛心歸零了！繼續練習一定能過關！'}
-                </p>
 
-                {/* ✨ AI 記憶教練區塊 */}
-                <div className="w-full bg-slate-900 border-2 border-indigo-500/50 rounded-2xl p-6 mb-8 relative z-10 text-left shadow-[0_0_20px_rgba(99,102,241,0.2)]">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="bg-indigo-500 p-2 rounded-xl">
-                      <Bot className="w-6 h-6 text-white" />
+                {wrongWords.length > 0 && (
+                  <div className="bg-rose-900/20 p-4 rounded-2xl mb-6 border border-rose-700/50 relative z-10 max-h-48 overflow-y-auto">
+                    <p className="text-rose-400 font-bold mb-3">❌ 答錯的單字：</p>
+                    <div className="text-left space-y-2">
+                      {wrongWords.map((word, idx) => (
+                        <div key={idx} className="text-sm text-slate-300 bg-slate-800/50 p-2 rounded">
+                          {word.en} - {word.zh}
+                        </div>
+                      ))}
                     </div>
-                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                      <Sparkles className="w-5 h-5 text-indigo-400" /> AI 專屬記憶教練
-                    </h3>
                   </div>
-                  
-                  {aiTip ? (
-                    <div className="bg-slate-800 p-4 rounded-xl border border-indigo-500/30 animate-in fade-in zoom-in-95 duration-500">
-                      <p className="text-slate-200 leading-relaxed whitespace-pre-wrap font-medium">{aiTip}</p>
-                    </div>
-                  ) : aiError ? (
-                    <div className="bg-rose-900/50 p-4 rounded-xl border border-rose-500/30">
-                      <p className="text-rose-300">{aiError}</p>
-                    </div>
-                  ) : (
-                    <p className="text-slate-400 mb-4">
-                      {wrongWords.length > 0 
-                        ? `教練發現你在 ${wrongWords.map(w=>w.en).slice(0,3).join(', ')} 等單字遇到了困難。`
-                        : '太神啦！全部答對！想聽聽教練分享單字冷知識嗎？'}
-                    </p>
-                  )}
-
-                  {!aiTip && !isAiLoading && (
-                    <button 
-                      onClick={fetchAiTip}
-                      className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 transform hover:scale-[1.02] active:scale-95"
-                    >
-                      <Sparkles className="w-5 h-5" /> 呼叫教練傳授秘訣
-                    </button>
-                  )}
-                  
-                  {isAiLoading && (
-                    <button disabled className="w-full bg-indigo-600/50 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 cursor-not-allowed">
-                      <Loader2 className="w-5 h-5 animate-spin" /> 教練正在為你構思專屬記憶法...
-                    </button>
-                  )}
-                </div>
+                )}
 
                 <div className="flex flex-col gap-3 relative z-10">
                   <button 
-                    onClick={() => startGame(selectedMode)}
-                    className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-6 rounded-2xl transition-all flex items-center justify-center gap-2 shadow-lg"
+                    onClick={() => setScreen('home')}
+                    className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-xl transition-all transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
                   >
-                    <RotateCcw className="w-5 h-5" /> 再玩一次
+                    <Home className="w-5 h-5" /> 返回首頁
                   </button>
                   <button 
-                    onClick={() => setScreen('mode')}
-                    className="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-4 px-6 rounded-2xl transition-all"
+                    onClick={() => {
+                      setSelectedMode(null);
+                      setScreen('mode');
+                    }}
+                    className="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 px-6 rounded-xl transition-all transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
                   >
-                    選擇其他模式
-                  </button>
-                  <button 
-                    onClick={() => setScreen('lesson')}
-                    className="w-full text-slate-500 hover:text-white font-semibold py-3 transition-colors"
-                  >
-                    返回課程列表
+                    <RotateCcw className="w-5 h-5" /> 重新挑戰
                   </button>
                 </div>
               </div>
             </div>
           )}
-          
-          {/* 搖晃與滾動條動畫設定 */}
-          <style dangerouslySetInnerHTML={{__html: `
-            @keyframes shake {
-              0%, 100% { transform: translateX(0); }
-              25% { transform: translateX(-10px); }
-              50% { transform: translateX(10px); }
-              75% { transform: translateX(-10px); }
-            }
-            .animate-shake {
-              animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
-            }
-            /* 自訂細緻的滾動條，讓課程選單更好看 */
-            .custom-scrollbar::-webkit-scrollbar {
-              width: 8px;
-            }
-            .custom-scrollbar::-webkit-scrollbar-track {
-              background: #1e293b;
-              border-radius: 10px;
-            }
-            .custom-scrollbar::-webkit-scrollbar-thumb {
-              background: #3b82f6;
-              border-radius: 10px;
-            }
-            .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-              background: #60a5fa;
-            }
-          `}} />
         </div>
       );
     }
