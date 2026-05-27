@@ -2,7 +2,7 @@
 
 ## 🎉 遊戲現已上線！
 
-**遊戲鏈接:** 
+**遊戲連結:** 
 🔗 https://paul890119.github.io/boyo800/game-enhanced.html
 
 ---
