@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>博幼遊戲平台 - 單字爭霸戰 Ultimate</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.2.0",
+        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+        "lucide-react": "https://esm.sh/lucide-react@0.292.0"
+      }
+    }
+  </script>
+
+  <style>
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 15px rgba(59, 130, 246, 0.6), inset 0 0 15px rgba(59, 130, 246, 0.3); }
+      50% { box-shadow: 0 0 30px rgba(59, 130, 246, 0.9), inset 0 0 20px rgba(59, 130, 246, 0.5); }
+    }
+    .pulse-glow { animation: pulse-glow 2s infinite; }
+    
+    @keyframes slide-up {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .slide-up { animation: slide-up 0.5s ease-out; }
+    
+    @keyframes bounce-in {
+      0% { transform: scale(0.3); opacity: 0; }
+      50% { opacity: 1; }
+      70% { transform: scale(1.05); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .bounce-in { animation: bounce-in 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+    }
+    .float { animation: float 3s ease-in-out infinite; }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+      20%, 40%, 60%, 80% { transform: translateX(5px); }
+    }
+    .shake { animation: shake 0.5s; }
+
+    @keyframes spin-slow {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .spin-slow { animation: spin-slow 4s linear infinite; }
+
+    .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: rgba(71, 85, 105, 0.1); border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.5); border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 0.8); }
+
+    .neon-border { border: 2px solid #00ffff; box-shadow: 0 0 10px #00ffff, inset 0 0 10px rgba(0, 255, 255, 0.2); }
+    .neon-glow { text-shadow: 0 0 10px #00ffff, 0 0 20px #0088ff; }
+    
+    body { background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%); }
+  </style>
+</head>
+<body class="bg-slate-900 m-0 p-0 font-sans overflow-hidden">
+  
+  <div id="root"></div>
+
+  <script type="text/babel" data-type="module">
+    import React, { useState, useEffect, useRef, useCallback } from 'react';
+    import { createRoot } from 'react-dom/client';
+    import { 
+      Play, BookOpen, Keyboard, MousePointerClick, Shuffle, Volume2, ArrowRight, 
+      RotateCcw, Check, X, Heart, Pause, Zap, Clock, ArrowLeft, Home, Rocket, 
+      Crosshair, Shield, Sparkles, Bot, BarChart3, Settings, Sun, Moon, Globe,
+      Award, TrendingUp, Target, Brain, Users, Trophy, Star, Medal, Flame,
+      Download, Upload, Share2, Bell, ShoppingCart, Gift, Lock, Unlock, User,
+      LogOut, Plus, Minus
+    } from 'https://esm.sh/lucide-react@0.292.0';
+
+    // ========== 完整詞彙數據 (800 單 & 400 單) ==========
+    const VOCAB_800 = {
+      1: [
+        { en: "husband", zh: "丈夫" }, { en: "wife", zh: "妻子" }, { en: "housewife", zh: "家庭主婦" },
+        { en: "Miss", zh: "小姐" }, { en: "thirteen", zh: "十三" }, { en: "fourteen", zh: "十四" },
+        { en: "fifteen", zh: "十五" }, { en: "sixteen", zh: "十六" }, { en: "seventeen", zh: "十七" },
+        { en: "eighteen", zh: "十八" }, { en: "nineteen", zh: "十九" }, { en: "twenty", zh: "二十" },
+        { en: "thirty", zh: "三十" }, { en: "forty", zh: "四十" }, { en: "fifty", zh: "五十" },
+        { en: "sixty", zh: "六十" }, { en: "seventy", zh: "七十" }, { en: "eighty", zh: "八十" },
+        { en: "ninety", zh: "九十" }, { en: "thousand", zh: "千" }
+      ],
+      2: [
+        { en: "number", zh: "數字" }, { en: "workbook", zh: "作業本" }, { en: "brush", zh: "刷子/畫筆" },
+        { en: "cellphone", zh: "手機" }, { en: "scooter", zh: "機車/滑板車" }, { en: "party", zh: "派對" },
+        { en: "gift", zh: "禮物" }, { en: "noon", zh: "中午" }, { en: "break", zh: "休息/打破" },
+        { en: "pretty", zh: "漂亮的" }, { en: "able", zh: "能夠的" }, { en: "young", zh: "年輕的" },
+        { en: "full", zh: "滿的/飽的" }, { en: "lucky", zh: "幸運的" }, { en: "so", zh: "所以" },
+        { en: "really", zh: "真的" }, { en: "during", zh: "在...期間" }, { en: "near", zh: "附近" },
+        { en: "guess", zh: "猜測" }, { en: "dining room", zh: "飯廳" }
+      ],
+      // ... 簡化展示，實際部署時包含全部 L1-L40
+    };
+
+    const VOCAB_400 = {
+      1: [
+        { en: "hello", zh: "你好" }, { en: "goodbye", zh: "再見" }, { en: "yes", zh: "是" },
+        { en: "no", zh: "否" }, { en: "please", zh: "請" }, { en: "thank you", zh: "謝謝" },
+        { en: "apple", zh: "蘋果" }, { en: "orange", zh: "橙子" }, { en: "banana", zh: "香蕉" },
+        { en: "one", zh: "一" }, { en: "two", zh: "二" }, { en: "three", zh: "三" },
+        { en: "four", zh: "四" }, { en: "five", zh: "五" }, { en: "cat", zh: "貓" },
+        { en: "dog", zh: "狗" }, { en: "bird", zh: "鳥" }, { en: "fish", zh: "魚" },
+        { en: "house", zh: "房子" }, { en: "school", zh: "學校" }
+      ],
+      // ... 簡化展示
+    };
+
+    // ========== 獎勵商店系統 ==========
+    const STORE_ITEMS = [
+      { id: 1, name: '金牌', zh: '金牌', icon: '🥇', cost: 50, type: 'badge' },
+      { id: 2, name: '鑽石', zh: '鑽石', icon: '💎', cost: 100, type: 'badge' },
+      { id: 3, name: '火焰', zh: '火焰徽章', icon: '🔥', cost: 75, type: 'badge' },
+      { id: 4, name: '彩虹', zh: '彩虹徽章', icon: '🌈', cost: 120, type: 'badge' },
+      { id: 5, name: '皇冠', zh: '皇冠', icon: '👑', cost: 150, type: 'badge' },
+      { id: 6, name: '星星套裝', zh: '星星套裝', icon: '⭐', cost: 80, type: 'avatar' },
+      { id: 7, name: '漸變主題', zh: '漸變主題', icon: '🎨', cost: 60, type: 'theme' },
+      { id: 8, name: 'VIP標籤', zh: 'VIP標籤', icon: '✨', cost: 200, type: 'badge' }
+    ];
+
+    // ========== 成就系統 ==========
+    const ACHIEVEMENTS = {
+      first_win: { id: 'first_win', name: '初試啼聲', desc: '完成第一場遊戲', icon: '🎮' },
+      ten_wins: { id: 'ten_wins', name: '十連勝', desc: '連續完成10場遊戲', icon: '🔥' },
+      perfect_game: { id: 'perfect_game', name: '完美無缺', desc: '滿血通關一個課程', icon: '⭐' },
+      speedrun: { id: 'speedrun', name: '飛快反應', desc: '在20秒內答對5題', icon: '⚡' },
+      all_modes: { id: 'all_modes', name: '全能戰士', desc: '完成所有三種模式', icon: '🏆' },
+      collector: { id: 'collector', name: '集卡達人', desc: '獲得50個星星', icon: '⭐⭐⭐' },
+      scholar: { id: 'scholar', name: '學霸', desc: '獲得200個星星', icon: '🧠' },
+      shopaholic: { id: 'shopaholic', name: '購物狂', desc: '在商店購買5件物品', icon: '🛍️' }
+    };
+
+    // ========== 難度系統 ==========
+    const DIFFICULTY_SETTINGS = {
+      easy: { name: '簡單', timePerQuestion: 150, healthBonus: 2, scoreMultiplier: 1, color: 'from-green-500 to-emerald-600' },
+      normal: { name: '普通', timePerQuestion: 100, healthBonus: 0, scoreMultiplier: 1.5, color: 'from-blue-500 to-cyan-600' },
+      hard: { name: '困難', timePerQuestion: 60, healthBonus: -1, scoreMultiplier: 2.5, color: 'from-red-500 to-orange-600' }
+    };
+
+    // ========== 本地儲存管理 (支持多學生) ==========
+    const StorageManager = {
+      getAllStudents: () => {
+        try {
+          const data = localStorage.getItem('boyo_students_db');
+          return data ? JSON.parse(data) : {};
+        } catch (e) {
+          console.error("讀取學生資料失敗", e);
+          return {};
+        }
+      },
+
+      getStudent: (studentId) => {
+        const students = StorageManager.getAllStudents();
+        return students[studentId] || StorageManager.createNewStudent(studentId);
+      },
+
+      createNewStudent: (studentId) => ({
+        id: studentId,
+        name: `學生 ${studentId}`,
+        totalScore: 0,
+        totalStars: 0,
+        lessonStars: {},
+        achievements: [],
+        gameHistory: [],
+        purchasedItems: [],
+        theme: 'dark',
+        difficulty: 'normal',
+        soundEnabled: true,
+        createdAt: new Date().toISOString()
+      }),
+
+      saveStudent: (studentId, data) => {
+        const students = StorageManager.getAllStudents();
+        students[studentId] = { ...students[studentId], ...data, updatedAt: new Date().toISOString() };
+        localStorage.setItem('boyo_students_db', JSON.stringify(students));
+      },
+
+      deleteStudent: (studentId) => {
+        const students = StorageManager.getAllStudents();
+        delete students[studentId];
+        localStorage.setItem('boyo_students_db', JSON.stringify(students));
+      }
+    };
+
+    // ========== 主應用組件 ==========
+    const App = () => {
+      const [currentScreen, setCurrentScreen] = useState('login');
+      const [currentStudent, setCurrentStudent] = useState(null);
+      const [currentStudentId, setCurrentStudentId] = useState(null);
+      const [students, setStudents] = useState({});
+
+      useEffect(() => {
+        loadStudents();
+      }, []);
+
+      const loadStudents = () => {
+        const allStudents = StorageManager.getAllStudents();
+        setStudents(allStudents);
+      };
+
+      const handleLogin = (studentId, studentName) => {
+        let student = StorageManager.getStudent(studentId);
+        if (studentName && !students[studentId]) {
+          student.name = studentName;
+          StorageManager.saveStudent(studentId, student);
+        }
+        setCurrentStudent(student);
+        setCurrentStudentId(studentId);
+        setCurrentScreen('home');
+        loadStudents();
+      };
+
+      const handleLogout = () => {
+        setCurrentStudent(null);
+        setCurrentStudentId(null);
+        setCurrentScreen('login');
+      };
+
+      const updateStudent = (data) => {
+        const updated = { ...currentStudent, ...data };
+        setCurrentStudent(updated);
+        StorageManager.saveStudent(currentStudentId, data);
+      };
+
+      if (currentScreen === 'login') {
+        return <LoginScreen onLogin={handleLogin} allStudents={students} />;
+      }
+
+      if (!currentStudent) return null;
+
+      return (
+        <div className="w-screen h-screen overflow-hidden bg-gradient-to-b from-slate-900 via-purple-900 to-slate-900">
+          <StudentHeader 
+            student={currentStudent} 
+            onLogout={handleLogout}
+            onUpdateStudent={updateStudent}
+          />
+          
+          {currentScreen === 'home' && (
+            <HomeScreen 
+              student={currentStudent}
+              onNavigate={setCurrentScreen}
+              onUpdateStudent={updateStudent}
+            />
+          )}
+          {currentScreen === 'lesson-select' && (
+            <LessonSelectScreen 
+              student={currentStudent}
+              onNavigate={setCurrentScreen}
+            />
+          )}
+          {currentScreen === 'game' && (
+            <GameScreen 
+              student={currentStudent}
+              onNavigate={setCurrentScreen}
+              onUpdateStudent={updateStudent}
+            />
+          )}
+          {currentScreen === 'store' && (
+            <StoreScreen 
+              student={currentStudent}
+              onNavigate={setCurrentScreen}
+              onUpdateStudent={updateStudent}
+            />
+          )}
+          {currentScreen === 'stats' && (
+            <StatsScreen 
+              student={currentStudent}
+              onNavigate={setCurrentScreen}
+            />
+          )}
+          {currentScreen === 'achievements' && (
+            <AchievementsScreen 
+              student={currentStudent}
+              onNavigate={setCurrentScreen}
+            />
+          )}
+        </div>
+      );
+    };
+
+    // ========== 登錄畫面 ==========
+    const LoginScreen = ({ onLogin, allStudents }) => {
+      const [inputId, setInputId] = useState('');
+      const [inputName, setInputName] = useState('');
+      const [showNewStudent, setShowNewStudent] = useState(false);
+
+      return (
+        <div className="w-screen h-screen flex items-center justify-center bg-gradient-to-b from-slate-900 via-blue-900 to-slate-900 p-4">
+          <div className="neon-border w-full max-w-md rounded-2xl bg-slate-800/50 backdrop-blur p-8">
+            <div className="text-center mb-8">
+              <div className="text-5xl mb-4 animate-bounce">🎮</div>
+              <h1 className="text-4xl font-bold neon-glow mb-2">單字爭霸戰</h1>
+              <p className="text-cyan-300">Ultimate Edition</p>
+            </div>
+
+            {!showNewStudent ? (
+              <>
+                <div className="space-y-4 mb-6">
+                  <label className="block text-cyan-300 font-bold mb-2">選擇學生帳號</label>
+                  
+                  {Object.values(allStudents).length > 0 ? (
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {Object.values(allStudents).map((student) => (
+                        <button
+                          key={student.id}
+                          onClick={() => onLogin(student.id)}
+                          className="w-full p-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 rounded-lg text-white font-bold transition transform hover:scale-105"
+                        >
+                          <div className="flex items-center gap-2">
+                            <User size={20} />
+                            <div className="text-left">
+                              <div>{student.name}</div>
+                              <div className="text-xs text-blue-200">⭐ {student.totalStars} | 分數: {student.totalScore}</div>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-400 text-center py-4">尚無學生帳號</p>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => setShowNewStudent(true)}
+                  className="w-full p-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 rounded-lg text-white font-bold transition"
+                >
+                  ➕ 新增學生帳號
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="space-y-4 mb-6">
+                  <input
+                    type="text"
+                    value={inputId}
+                    onChange={(e) => setInputId(e.target.value)}
+                    placeholder="輸入學號"
+                    className="w-full p-3 rounded-lg bg-slate-700 text-white border-2 border-cyan-400 focus:outline-none"
+                  />
+                  <input
+                    type="text"
+                    value={inputName}
+                    onChange={(e) => setInputName(e.target.value)}
+                    placeholder="輸入學生名字"
+                    className="w-full p-3 rounded-lg bg-slate-700 text-white border-2 border-cyan-400 focus:outline-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    onClick={() => {
+                      if (inputId && inputName) {
+                        onLogin(inputId, inputName);
+                        setInputId('');
+                        setInputName('');
+                      }
+                    }}
+                    className="p-3 bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg text-white font-bold"
+                  >
+                    登入
+                  </button>
+                  <button
+                    onClick={() => setShowNewStudent(false)}
+                    className="p-3 bg-gradient-to-r from-red-600 to-pink-600 rounded-lg text-white font-bold"
+                  >
+                    取消
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      );
+    };
+
+    // ========== 學生頭部 ==========
+    const StudentHeader = ({ student, onLogout, onUpdateStudent }) => {
+      return (
+        <div className="bg-gradient-to-r from-blue-900 to-purple-900 border-b-2 border-cyan-400 p-4 text-white">
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="text-3xl">👤</div>
+              <div>
+                <div className="font-bold text-lg">{student.name}</div>
+                <div className="text-sm text-cyan-300">ID: {student.id}</div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2 bg-yellow-500/20 px-4 py-2 rounded-lg">
+                <Star size={24} className="text-yellow-400" />
+                <span className="font-bold text-lg">{student.totalStars}</span>
+              </div>
+              <div className="flex items-center gap-2 bg-purple-500/20 px-4 py-2 rounded-lg">
+                <Trophy size={24} className="text-purple-400" />
+                <span className="font-bold">{student.totalScore}</span>
+              </div>
+              <button
+                onClick={onLogout}
+                className="p-2 bg-red-600 hover:bg-red-700 rounded-lg transition"
+              >
+                <LogOut size={24} />
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // ========== 首頁 ==========
+    const HomeScreen = ({ student, onNavigate, onUpdateStudent }) => {
+      return (
+        <div className="p-6 h-[calc(100vh-80px)] overflow-y-auto custom-scrollbar">
+          <div className="max-w-7xl mx-auto">
+            {/* 歡迎橫幅 */}
+            <div className="mb-8 neon-border p-8 rounded-2xl bg-gradient-to-r from-blue-900/50 to-purple-900/50 text-center">
+              <div className="text-6xl mb-4 animate-bounce">🌟</div>
+              <h1 className="text-4xl font-bold text-white mb-2">歡迎回來, {student.name}!</h1>
+              <p className="text-cyan-300 text-lg">準備好挑戰 800 個單字了嗎?</p>
+            </div>
+
+            {/* 主要菜單 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              {/* 開始遊戲 */}
+              <button
+                onClick={() => onNavigate('lesson-select')}
+                className="group p-8 rounded-2xl bg-gradient-to-br from-green-600 to-emerald-700 hover:from-green-500 hover:to-emerald-600 transform hover:scale-105 transition duration-300 neon-border"
+              >
+                <div className="text-5xl mb-4 group-hover:animate-bounce">🎮</div>
+                <h3 className="text-2xl font-bold text-white mb-2">開始遊戲</h3>
+                <p className="text-green-100">選擇課程開始挑戰</p>
+              </button>
+
+              {/* 進度統計 */}
+              <button
+                onClick={() => onNavigate('stats')}
+                className="group p-8 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-700 hover:from-blue-500 hover:to-cyan-600 transform hover:scale-105 transition duration-300 neon-border"
+              >
+                <div className="text-5xl mb-4 group-hover:animate-bounce">📊</div>
+                <h3 className="text-2xl font-bold text-white mb-2">進度統計</h3>
+                <p className="text-blue-100">查看你的學習成果</p>
+              </button>
+
+              {/* 成就系統 */}
+              <button
+                onClick={() => onNavigate('achievements')}
+                className="group p-8 rounded-2xl bg-gradient-to-br from-yellow-600 to-orange-700 hover:from-yellow-500 hover:to-orange-600 transform hover:scale-105 transition duration-300 neon-border"
+              >
+                <div className="text-5xl mb-4 group-hover:animate-bounce">🏆</div>
+                <h3 className="text-2xl font-bold text-white mb-2">成就系統</h3>
+                <p className="text-yellow-100">解鎖 8 個成就徽章</p>
+              </button>
+
+              {/* 獎勵商店 */}
+              <button
+                onClick={() => onNavigate('store')}
+                className="group p-8 rounded-2xl bg-gradient-to-br from-pink-600 to-rose-700 hover:from-pink-500 hover:to-rose-600 transform hover:scale-105 transition duration-300 neon-border"
+              >
+                <div className="text-5xl mb-4 group-hover:animate-bounce">🛍️</div>
+                <h3 className="text-2xl font-bold text-white mb-2">獎勵商店</h3>
+                <p className="text-pink-100">用星星購買禮物</p>
+              </button>
+
+              {/* 設置 */}
+              <button
+                className="group p-8 rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-700 hover:from-purple-500 hover:to-indigo-600 transform hover:scale-105 transition duration-300 neon-border"
+              >
+                <div className="text-5xl mb-4 group-hover:animate-bounce">⚙️</div>
+                <h3 className="text-2xl font-bold text-white mb-2">設置</h3>
+                <p className="text-purple-100">自訂你的遊戲體驗</p>
+              </button>
+            </div>
+
+            {/* 快速統計 */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="neon-border p-6 rounded-xl bg-slate-800/50">
+                <div className="text-3xl text-center mb-2">⭐</div>
+                <div className="text-gray-400 text-center text-sm">總星星</div>
+                <div className="text-3xl font-bold text-center text-yellow-400">{student.totalStars}/360</div>
+              </div>
+              <div className="neon-border p-6 rounded-xl bg-slate-800/50">
+                <div className="text-3xl text-center mb-2">🎮</div>
+                <div className="text-gray-400 text-center text-sm">遊戲局數</div>
+                <div className="text-3xl font-bold text-center text-blue-400">{student.gameHistory.length}</div>
+              </div>
+              <div className="neon-border p-6 rounded-xl bg-slate-800/50">
+                <div className="text-3xl text-center mb-2">🏆</div>
+                <div className="text-gray-400 text-center text-sm">解鎖成就</div>
+                <div className="text-3xl font-bold text-center text-purple-400">{student.achievements.length}/8</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // ========== 課程選擇 ==========
+    const LessonSelectScreen = ({ student, onNavigate }) => {
+      const [selectedLevel, setSelectedLevel] = useState(null);
+
+      return (
+        <div className="p-6 h-[calc(100vh-80px)] overflow-y-auto custom-scrollbar">
+          <div className="max-w-6xl mx-auto">
+            <button
+              onClick={() => onNavigate('home')}
+              className="mb-6 p-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-white flex items-center gap-2 transition"
+            >
+              <ArrowLeft size={20} /> 返回首頁
+            </button>
+
+            <h2 className="text-3xl font-bold text-white mb-6">📚 選擇課程</h2>
+
+            <div className="grid grid-cols-4 md:grid-cols-8 gap-3 mb-8">
+              {Array.from({ length: 40 }, (_, i) => i + 1).map((lesson) => (
+                <button
+                  key={lesson}
+                  onClick={() => setSelectedLevel(lesson)}
+                  className={`p-4 rounded-lg font-bold text-lg transition transform hover:scale-110 ${
+                    selectedLevel === lesson
+                      ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white neon-border'
+                      : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
+                  }`}
+                >
+                  L{lesson}
+                </button>
+              ))}
+            </div>
+
+            {selectedLevel && (
+              <div className="neon-border p-8 rounded-xl bg-slate-800/50">
+                <h3 className="text-2xl font-bold text-white mb-4">Lesson {selectedLevel} - 選擇難度</h3>
+                <div className="grid grid-cols-3 gap-4">
+                  {['easy', 'normal', 'hard'].map((diff) => (
+                    <button
+                      key={diff}
+                      onClick={() => onNavigate('game')}
+                      className={`p-6 rounded-xl font-bold text-lg text-white transition transform hover:scale-105 bg-gradient-to-b ${DIFFICULTY_SETTINGS[diff].color}`}
+                    >
+                      {DIFFICULTY_SETTINGS[diff].name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    };
+
+    // ========== 遊戲畫面 (簡化版) ==========
+    const GameScreen = ({ student, onNavigate, onUpdateStudent }) => {
+      return (
+        <div className="p-6 h-[calc(100vh-80px)] flex items-center justify-center">
+          <div className="text-center text-white">
+            <div className="text-6xl mb-4 animate-bounce">🎮</div>
+            <h2 className="text-3xl font-bold mb-4">遊戲進行中</h2>
+            <p className="mb-8 text-gray-400">遊戲引擎載入中...</p>
+            <button
+              onClick={() => onNavigate('home')}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-lg font-bold"
+            >
+              返回首頁
+            </button>
+          </div>
+        </div>
+      );
+    };
+
+    // ========== 商店 ==========
+    const StoreScreen = ({ student, onNavigate, onUpdateStudent }) => {
+      return (
+        <div className="p-6 h-[calc(100vh-80px)] overflow-y-auto custom-scrollbar">
+          <div className="max-w-6xl mx-auto">
+            <button
+              onClick={() => onNavigate('home')}
+              className="mb-6 p-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-white flex items-center gap-2 transition"
+            >
+              <ArrowLeft size={20} /> 返回首頁
+            </button>
+
+            <div className="mb-6">
+              <h2 className="text-3xl font-bold text-white mb-2">🛍️ 獎勵商店</h2>
+              <div className="flex items-center gap-2 text-yellow-400 font-bold text-xl">
+                <Star size={24} /> 可用星星: {student.totalStars}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {STORE_ITEMS.map((item) => (
+                <div
+                  key={item.id}
+                  className={`neon-border p-6 rounded-xl text-center transition transform hover:scale-105 ${
+                    student.purchasedItems.includes(item.id)
+                      ? 'bg-gray-700/50 opacity-60'
+                      : 'bg-slate-800/50 hover:bg-slate-800/80'
+                  }`}
+                >
+                  <div className="text-5xl mb-3">{item.icon}</div>
+                  <h3 className="text-xl font-bold text-white mb-2">{item.zh}</h3>
+                  <div className="flex items-center justify-center gap-1 text-yellow-400 font-bold mb-4">
+                    <Star size={18} /> {item.cost}
+                  </div>
+                  
+                  {student.purchasedItems.includes(item.id) ? (
+                    <div className="text-green-400 font-bold">✓ 已購買</div>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        if (student.totalStars >= item.cost) {
+                          const newStars = student.totalStars - item.cost;
+                          const newItems = [...student.purchasedItems, item.id];
+                          onUpdateStudent({ 
+                            totalStars: newStars,
+                            purchasedItems: newItems
+                          });
+                        }
+                      }}
+                      disabled={student.totalStars < item.cost}
+                      className={`w-full py-2 rounded-lg font-bold transition ${
+                        student.totalStars >= item.cost
+                          ? 'bg-green-600 hover:bg-green-500 text-white'
+                          : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                      }`}
+                    >
+                      {student.totalStars >= item.cost ? '購買' : '星星不足'}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // ========== 統計 ==========
+    const StatsScreen = ({ student, onNavigate }) => {
+      return (
+        <div className="p-6 h-[calc(100vh-80px)] overflow-y-auto custom-scrollbar">
+          <div className="max-w-4xl mx-auto">
+            <button
+              onClick={() => onNavigate('home')}
+              className="mb-6 p-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-white flex items-center gap-2 transition"
+            >
+              <ArrowLeft size={20} /> 返回首頁
+            </button>
+
+            <h2 className="text-3xl font-bold text-white mb-6">📊 進度統計</h2>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              <div className="neon-border p-6 rounded-xl bg-slate-800/50">
+                <div className="text-4xl text-center mb-2">⭐</div>
+                <div className="text-gray-400 text-center text-sm mb-2">總星星</div>
+                <div className="text-3xl font-bold text-center text-yellow-400">{student.totalStars}</div>
+              </div>
+              <div className="neon-border p-6 rounded-xl bg-slate-800/50">
+                <div className="text-4xl text-center mb-2">🏆</div>
+                <div className="text-gray-400 text-center text-sm mb-2">總分數</div>
+                <div className="text-3xl font-bold text-center text-purple-400">{student.totalScore}</div>
+              </div>
+              <div className="neon-border p-6 rounded-xl bg-slate-800/50">
+                <div className="text-4xl text-center mb-2">🎮</div>
+                <div className="text-gray-400 text-center text-sm mb-2">遊戲局數</div>
+                <div className="text-3xl font-bold text-center text-blue-400">{student.gameHistory.length}</div>
+              </div>
+              <div className="neon-border p-6 rounded-xl bg-slate-800/50">
+                <div className="text-4xl text-center mb-2">🎯</div>
+                <div className="text-gray-400 text-center text-sm mb-2">成就徽章</div>
+                <div className="text-3xl font-bold text-center text-cyan-400">{student.achievements.length}/8</div>
+              </div>
+            </div>
+
+            <div className="neon-border p-6 rounded-xl bg-slate-800/50 text-white">
+              <h3 className="text-xl font-bold mb-4">最近遊戲</h3>
+              {student.gameHistory.length === 0 ? (
+                <p className="text-gray-400">還沒有遊戲記錄</p>
+              ) : (
+                <div className="space-y-3">
+                  {student.gameHistory.slice(-5).reverse().map((game, idx) => (
+                    <div key={idx} className="p-3 bg-slate-700 rounded-lg flex justify-between">
+                      <span>課程 {game.lesson} - {game.difficulty}</span>
+                      <span className="font-bold text-yellow-400">{game.score} 分</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // ========== 成就 ==========
+    const AchievementsScreen = ({ student, onNavigate }) => {
+      return (
+        <div className="p-6 h-[calc(100vh-80px)] overflow-y-auto custom-scrollbar">
+          <div className="max-w-4xl mx-auto">
+            <button
+              onClick={() => onNavigate('home')}
+              className="mb-6 p-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-white flex items-center gap-2 transition"
+            >
+              <ArrowLeft size={20} /> 返回首頁
+            </button>
+
+            <h2 className="text-3xl font-bold text-white mb-6">🏆 成就系統</h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {Object.values(ACHIEVEMENTS).map((achievement) => (
+                <div
+                  key={achievement.id}
+                  className={`neon-border p-6 rounded-xl transition ${
+                    student.achievements.includes(achievement.id)
+                      ? 'bg-gradient-to-r from-yellow-900/50 to-orange-900/50 border-yellow-400'
+                      : 'bg-slate-800/50 opacity-50'
+                  }`}
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="text-4xl">{achievement.icon}</div>
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold text-white">{achievement.name}</h3>
+                      <p className="text-gray-300 text-sm">{achievement.desc}</p>
+                      {student.achievements.includes(achievement.id) && (
+                        <p className="text-green-400 font-bold mt-2">✓ 已解鎖</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // ========== 應用入口 ==========
+    const root = createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
