@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>博幼800單 - 連線對戰版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-500 to-purple-600 min-h-screen">
+    <div id="root"></div>
+    <script>
+        // 遊戲狀態
+        const GameState = {
+            page: 'menu',
+            userId: localStorage.getItem('gameUserId') || `user_${Date.now()}`,
+            userName: localStorage.getItem('gameUserName') || '',
+            socket: null,
+            availableRooms: [],
+            currentRoom: null,
+            gameData: {
+                courseId: null,
+                difficulty: 'normal',
+                mode: 'recognition'
+            },
+            players: {},
+            scores: {},
+            currentQuestionIndex: 0,
+            totalQuestions: 20
+        };
+
+        // Socket.io 連接
+        function initSocket() {
+            const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:5000';
+            GameState.socket = io(SOCKET_URL);
+
+            GameState.socket.on('connect', () => {
+                console.log('✅ 連接成功');
+                GameState.socket.emit('user_join', {
+                    userId: GameState.userId,
+                    userName: GameState.userName
+                });
+            });
+
+            GameState.socket.on('room_available', (data) => {
+                GameState.availableRooms.push(data);
+                render();
+            });
+
+            GameState.socket.on('room_created', (data) => {
+                GameState.currentRoom = data.roomId;
+                GameState.page = 'waiting';
+                render();
+            });
+
+            GameState.socket.on('player_joined', (data) => {
+                GameState.players = data.players;
+                if (data.status === 'ready') {
+                    GameState.page = 'gameReady';
+                }
+                render();
+            });
+
+            GameState.socket.on('game_start', (data) => {
+                GameState.page = 'playing';
+                GameState.currentRoom = data.roomId;
+                render();
+            });
+
+            GameState.socket.on('answer_submitted', (data) => {
+                GameState.scores[data.playerId] = data.totalScore;
+                render();
+            });
+
+            GameState.socket.on('game_end', (data) => {
+                GameState.page = 'results';
+                GameState.players = data.results;
+                render();
+            });
+
+            GameState.socket.on('join_error', (data) => {
+                alert('❌ ' + data.message);
+            });
+        }
+
+        // ========== 主菜單 ==========
+        function MenuPage() {
+            return `
+                <div class="min-h-screen flex items-center justify-center p-4">
+                    <div class="bg-white rounded-2xl shadow-2xl p-12 text-center max-w-md">
+                        <h1 class="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 mb-2">🎮</h1>
+                        <h1 class="text-4xl font-bold text-gray-800 mb-2">博幼800單</h1>
+                        <p class="text-gray-600 text-lg mb-2">連線對戰版</p>
+                        <p class="text-gray-500 mb-8">與全球玩家即時對戰</p>
+
+                        <div id="playerSetup" class="space-y-4 mb-8">
+                            <div>
+                                <input type="text" id="playerName" placeholder="輸入你的名字" maxlength="15"
+                                    class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                            </div>
+                            <button onclick="setPlayerName()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-lg transition">
+                                ✅ 開始遊戲
+                            </button>
+                        </div>
+
+                        <div class="space-y-3">
+                            <button onclick="GameState.page='courseSelect'; render()" 
+                                class="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-bold py-3 rounded-lg transition flex items-center justify-center gap-2">
+                                🎯 選擇課程
+                            </button>
+                            <button onclick="GameState.page='roomBrowser'; render()" 
+                                class="w-full bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white font-bold py-3 rounded-lg transition flex items-center justify-center gap-2">
+                                👥 找對手
+                            </button>
+                        </div>
+
+                        <div class="mt-8 pt-8 border-t border-gray-200 text-xs text-gray-500">
+                            <p>玩家ID: ${GameState.userId.substring(5, 15)}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ========== 課程選擇 ==========
+        function CourseSelectPage() {
+            return `
+                <div class="min-h-screen p-8">
+                    <div class="max-w-4xl mx-auto">
+                        <button onclick="GameState.page='menu'; render()" class="mb-6 text-white hover:text-gray-200 flex items-center gap-2">
+                            ← 返回
+                        </button>
+
+                        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                            <h2 class="text-3xl font-bold text-gray-800 mb-2">🎓 選擇課程</h2>
+                            <p class="text-gray-600">選擇想要挑戰的課程 (1-40)</p>
+                        </div>
+
+                        <!-- 難度選擇 -->
+                        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                            <h3 class="text-xl font-bold text-gray-800 mb-4">⚡ 選擇難度</h3>
+                            <div class="grid grid-cols-3 gap-4">
+                                <button onclick="setGameDifficulty('easy')" 
+                                    class="p-4 rounded-lg font-bold transition ${GameState.gameData.difficulty === 'easy' ? 'bg-green-500 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'}">
+                                    🎯 簡單
+                                </button>
+                                <button onclick="setGameDifficulty('normal')" 
+                                    class="p-4 rounded-lg font-bold transition ${GameState.gameData.difficulty === 'normal' ? 'bg-yellow-500 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'}">
+                                    ⚡ 普通
+                                </button>
+                                <button onclick="setGameDifficulty('hard')" 
+                                    class="p-4 rounded-lg font-bold transition ${GameState.gameData.difficulty === 'hard' ? 'bg-red-500 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'}">
+                                    🔥 困難
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 遊戲模式選擇 -->
+                        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                            <h3 class="text-xl font-bold text-gray-800 mb-4">🎮 選擇模式</h3>
+                            <div class="grid grid-cols-3 gap-4">
+                                <button onclick="setGameMode('recognition')" 
+                                    class="p-4 rounded-lg font-bold transition ${GameState.gameData.mode === 'recognition' ? 'bg-blue-500 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'}">
+                                    🖱️ 認讀
+                                </button>
+                                <button onclick="setGameMode('scramble')" 
+                                    class="p-4 rounded-lg font-bold transition ${GameState.gameData.mode === 'scramble' ? 'bg-blue-500 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'}">
+                                    🔤 重組
+                                </button>
+                                <button onclick="setGameMode('spelling')" 
+                                    class="p-4 rounded-lg font-bold transition ${GameState.gameData.mode === 'spelling' ? 'bg-blue-500 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'}">
+                                    ⌨️ 拼字
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 課程網格 -->
+                        <div class="bg-white rounded-xl shadow-lg p-6">
+                            <h3 class="text-xl font-bold text-gray-800 mb-4">📚 課程列表</h3>
+                            <div class="grid grid-cols-5 gap-3">
+                                ${Array.from({length: 40}, (_, i) => i + 1).map(courseId => `
+                                    <button onclick="selectCourse(${courseId})" 
+                                        class="p-4 rounded-lg font-bold transition hover:scale-105 ${GameState.gameData.courseId === courseId ? 'bg-blue-500 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'}">
+                                        L${courseId}
+                                    </button>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <!-- 開始遊戲按鈕 -->
+                        <div class="mt-8 flex gap-4">
+                            <button onclick="createGameRoom()" 
+                                class="flex-1 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-bold py-4 rounded-lg transition">
+                                🎮 建立房間
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ========== 房間瀏覽 ==========
+        function RoomBrowserPage() {
+            return `
+                <div class="min-h-screen p-8">
+                    <div class="max-w-4xl mx-auto">
+                        <button onclick="GameState.page='menu'; render()" class="mb-6 text-white hover:text-gray-200 flex items-center gap-2">
+                            ← 返回
+                        </button>
+
+                        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                            <h2 class="text-3xl font-bold text-gray-800 mb-2">👥 尋找對手</h2>
+                            <p class="text-gray-600">選擇一個房間加入對戰</p>
+                        </div>
+
+                        <div class="space-y-4">
+                            ${GameState.availableRooms.length > 0 ? GameState.availableRooms.map(room => `
+                                <div class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
+                                    <div class="flex justify-between items-center">
+                                        <div>
+                                            <h3 class="text-lg font-bold text-gray-800">
+                                                房間 #${room.roomId.substring(5, 10)}
+                                            </h3>
+                                            <p class="text-gray-600">
+                                                📚 課程 L${room.courseId} | 
+                                                ${room.difficulty === 'easy' ? '🎯 簡單' : room.difficulty === 'normal' ? '⚡ 普通' : '🔥 困難'} |
+                                                ${room.mode === 'recognition' ? '🖱️ 認讀' : room.mode === 'scramble' ? '🔤 重組' : '⌨️ 拼字'}
+                                            </p>
+                                        </div>
+                                        <button onclick="joinGameRoom('${room.roomId}')" 
+                                            class="bg-green-500 hover:bg-green-600 text-white font-bold px-6 py-2 rounded-lg transition">
+                                            加入
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('') : '<div class="bg-white rounded-lg shadow p-6 text-center text-gray-500">暫時沒有可用房間，點擊「建立房間」開始對戰</div>'}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ========== 等待對手 ==========
+        function WaitingPage() {
+            return `
+                <div class="min-h-screen flex items-center justify-center p-4">
+                    <div class="bg-white rounded-2xl shadow-2xl p-12 text-center max-w-md">
+                        <div class="animate-bounce text-6xl mb-6">⏳</div>
+                        <h2 class="text-3xl font-bold text-gray-800 mb-4">等待對手加入</h2>
+                        <p class="text-gray-600 mb-8">房間: ${GameState.currentRoom?.substring(5, 15) || '...'}</p>
+                        
+                        <div class="bg-gradient-to-r from-blue-100 to-purple-100 rounded-lg p-4 mb-8">
+                            <p class="text-sm text-gray-700">
+                                🎯 你在線人數: <strong>1/2</strong>
+                            </p>
+                        </div>
+
+                        <button onclick="cancelGame()" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-lg transition">
+                            ✕ 取消
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ========== 遊戲就緒 ==========
+        function GameReadyPage() {
+            return `
+                <div class="min-h-screen flex items-center justify-center p-4">
+                    <div class="bg-white rounded-2xl shadow-2xl p-12 text-center max-w-md">
+                        <div class="text-6xl mb-6 animate-pulse">🎮</div>
+                        <h2 class="text-3xl font-bold text-gray-800 mb-4">準備開始！</h2>
+                        <p class="text-gray-600 mb-2">對手已經加入</p>
+                        <p class="text-gray-500 mb-8">遊戲即將開始...</p>
+                        
+                        <div class="grid grid-cols-2 gap-4 mb-8">
+                            <div class="bg-blue-50 p-4 rounded-lg">
+                                <p class="text-sm text-gray-600">你</p>
+                                <p class="text-xl font-bold text-blue-600">${GameState.userName}</p>
+                            </div>
+                            <div class="bg-purple-50 p-4 rounded-lg">
+                                <p class="text-sm text-gray-600">對手</p>
+                                <p class="text-xl font-bold text-purple-600">等待中...</p>
+                            </div>
+                        </div>
+
+                        <button onclick="cancelGame()" class="w-full bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-3 rounded-lg transition">
+                            ← 返回
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ========== 遊戲進行中 ==========
+        function PlayingPage() {
+            const questionNum = GameState.currentQuestionIndex + 1;
+            return `
+                <div class="min-h-screen p-4 flex items-center justify-center">
+                    <div class="w-full max-w-2xl">
+                        <!-- 遊戲 HUD -->
+                        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                            <div class="grid grid-cols-3 gap-4 mb-6">
+                                <div class="bg-blue-50 p-4 rounded-lg text-center">
+                                    <p class="text-gray-600 text-sm">你的分數</p>
+                                    <p class="text-3xl font-bold text-blue-600">${GameState.scores[GameState.userId] || 0}</p>
+                                </div>
+                                <div class="bg-yellow-50 p-4 rounded-lg text-center">
+                                    <p class="text-gray-600 text-sm">進度</p>
+                                    <p class="text-3xl font-bold text-yellow-600">${questionNum}/${GameState.totalQuestions}</p>
+                                </div>
+                                <div class="bg-purple-50 p-4 rounded-lg text-center">
+                                    <p class="text-gray-600 text-sm">對手分數</p>
+                                    <p class="text-3xl font-bold text-purple-600">計算中...</p>
+                                </div>
+                            </div>
+
+                            <!-- 進度條 -->
+                            <div class="w-full bg-gray-300 rounded-full h-2">
+                                <div class="bg-blue-500 h-2 rounded-full transition-all" style="width: ${(questionNum / GameState.totalQuestions) * 100}%"></div>
+                            </div>
+                        </div>
+
+                        <!-- 問題卡片 -->
+                        <div class="bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg shadow-lg p-8 text-white mb-6">
+                            <p class="text-center text-sm font-medium mb-4">❓ 問題 ${questionNum} / ${GameState.totalQuestions}</p>
+                            <h2 class="text-4xl font-bold text-center mb-8">
+                                選擇正確的英文單字
+                            </h2>
+                            <div class="bg-white bg-opacity-20 rounded-lg p-6 text-center">
+                                <p class="text-5xl font-bold">"學習"</p>
+                            </div>
+                        </div>
+
+                        <!-- 選項 -->
+                        <div class="grid grid-cols-2 gap-4 mb-6">
+                            <button onclick="submitAnswer(true)" class="bg-green-500 hover:bg-green-600 text-white font-bold py-4 rounded-lg transition transform hover:scale-105">
+                                A. Study
+                            </button>
+                            <button onclick="submitAnswer(false)" class="bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-lg transition transform hover:scale-105">
+                                B. Play
+                            </button>
+                            <button onclick="submitAnswer(false)" class="bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-lg transition transform hover:scale-105">
+                                C. Sleep
+                            </button>
+                            <button onclick="submitAnswer(false)" class="bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-lg transition transform hover:scale-105">
+                                D. Eat
+                            </button>
+                        </div>
+
+                        <!-- 快速按鈕 -->
+                        <button onclick="skipQuestion()" class="w-full bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 rounded-lg transition">
+                            ⏭️ 跳過
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ========== 結果頁面 ==========
+        function ResultsPage() {
+            const playerScore = GameState.scores[GameState.userId] || 0;
+            const isWinner = true; // Mock data
+            
+            return `
+                <div class="min-h-screen flex items-center justify-center p-4">
+                    <div class="bg-white rounded-2xl shadow-2xl p-12 text-center max-w-md">
+                        <div class="text-6xl mb-6">${isWinner ? '🎉' : '😢'}</div>
+                        <h2 class="text-3xl font-bold text-gray-800 mb-2">${isWinner ? '你贏了！' : '再加油！'}</h2>
+                        <p class="text-gray-600 mb-8">遊戲已結束</p>
+
+                        <!-- 分數展示 -->
+                        <div class="grid grid-cols-2 gap-4 mb-8">
+                            <div class="bg-blue-50 p-6 rounded-lg">
+                                <p class="text-gray-600 text-sm mb-2">你</p>
+                                <p class="text-4xl font-bold text-blue-600">${playerScore}</p>
+                                <p class="text-xs text-gray-500 mt-2">分</p>
+                            </div>
+                            <div class="bg-red-50 p-6 rounded-lg">
+                                <p class="text-gray-600 text-sm mb-2">對手</p>
+                                <p class="text-4xl font-bold text-red-600">850</p>
+                                <p class="text-xs text-gray-500 mt-2">分</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-gradient-to-r from-yellow-100 to-orange-100 rounded-lg p-4 mb-8">
+                            <p class="text-lg font-bold text-orange-600">⭐⭐⭐ 你獲得 3 顆星 ⭐⭐⭐</p>
+                        </div>
+
+                        <!-- 按鈕 -->
+                        <div class="space-y-3">
+                            <button onclick="GameState.page='menu'; render()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-lg transition">
+                                🏠 返回主頁
+                            </button>
+                            <button onclick="GameState.page='courseSelect'; render()" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-lg transition">
+                                🔄 再玩一次
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ========== 函數 ==========
+        function setPlayerName() {
+            const name = document.getElementById('playerName')?.value;
+            if (!name || name.trim() === '') {
+                alert('請輸入你的名字');
+                return;
+            }
+            GameState.userName = name;
+            localStorage.setItem('gameUserName', name);
+            GameState.page = 'courseSelect';
+            render();
+        }
+
+        function setGameDifficulty(difficulty) {
+            GameState.gameData.difficulty = difficulty;
+            render();
+        }
+
+        function setGameMode(mode) {
+            GameState.gameData.mode = mode;
+            render();
+        }
+
+        function selectCourse(courseId) {
+            GameState.gameData.courseId = courseId;
+            render();
+        }
+
+        function createGameRoom() {
+            if (!GameState.gameData.courseId) {
+                alert('請選擇課程');
+                return;
+            }
+            if (GameState.socket) {
+                GameState.socket.emit('create_game_room', GameState.gameData);
+            }
+        }
+
+        function joinGameRoom(roomId) {
+            if (GameState.socket) {
+                GameState.socket.emit('join_game_room', { roomId });
+            }
+        }
+
+        function submitAnswer(correct) {
+            const timeRemaining = Math.random() * 30 * 1000; // 模擬
+            if (GameState.socket) {
+                GameState.socket.emit('submit_answer', {
+                    roomId: GameState.currentRoom,
+                    answer: correct,
+                    correct,
+                    timeRemaining
+                });
+            }
+            
+            if (GameState.currentQuestionIndex < GameState.totalQuestions - 1) {
+                GameState.currentQuestionIndex++;
+            } else {
+                if (GameState.socket) {
+                    GameState.socket.emit('end_game', { roomId: GameState.currentRoom });
+                }
+            }
+            render();
+        }
+
+        function skipQuestion() {
+            if (GameState.currentQuestionIndex < GameState.totalQuestions - 1) {
+                GameState.currentQuestionIndex++;
+                render();
+            }
+        }
+
+        function cancelGame() {
+            GameState.page = 'menu';
+            GameState.currentRoom = null;
+            GameState.currentQuestionIndex = 0;
+            render();
+        }
+
+        function render() {
+            const root = document.getElementById('root');
+            let html = '';
+            
+            switch (GameState.page) {
+                case 'menu':
+                    html = MenuPage();
+                    break;
+                case 'courseSelect':
+                    html = CourseSelectPage();
+                    break;
+                case 'roomBrowser':
+                    html = RoomBrowserPage();
+                    break;
+                case 'waiting':
+                    html = WaitingPage();
+                    break;
+                case 'gameReady':
+                    html = GameReadyPage();
+                    break;
+                case 'playing':
+                    html = PlayingPage();
+                    break;
+                case 'results':
+                    html = ResultsPage();
+                    break;
+                default:
+                    html = MenuPage();
+            }
+            
+            root.innerHTML = html;
+        }
+
+        // 初始化
+        localStorage.setItem('gameUserId', GameState.userId);
+        initSocket();
+        render();
+    </script>
+</body>
+</html>
