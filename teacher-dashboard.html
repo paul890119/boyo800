@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>博幼800單 - 教師後台管理系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        [data-theme="dark"] {
+            color-scheme: dark;
+        }
+        [data-theme="light"] {
+            color-scheme: light;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div id="root"></div>
+    <script>
+        // 全局应用状态
+        const AppState = {
+            currentPage: 'login',
+            theme: localStorage.getItem('teacherTheme') || 'light',
+            teacher: null,
+            students: [],
+            selectedStudent: null,
+            stats: {}
+        };
+
+        // API基础URL
+        const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
+        // ========== 登入页面 ==========
+        function LoginPage() {
+            return `
+                <div class="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center p-4">
+                    <div class="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
+                        <div class="text-center mb-8">
+                            <h1 class="text-3xl font-bold text-gray-800 mb-2">教師後台</h1>
+                            <p class="text-gray-600">博幼800單 - 學生管理系統</p>
+                        </div>
+
+                        <form id="loginForm" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">教師信箱</label>
+                                <input type="email" required placeholder="teacher@example.com" 
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">密碼</label>
+                                <input type="password" required placeholder="••••••••" 
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 rounded-lg transition">
+                                登入
+                            </button>
+                        </form>
+
+                        <div class="mt-6 pt-6 border-t border-gray-200">
+                            <p class="text-center text-gray-600 text-sm mb-4">還沒有帳號？</p>
+                            <button onclick="AppState.currentPage = 'register'; render()" 
+                                class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 rounded-lg transition">
+                                建立新帳號
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ========== 註冊页面 ==========
+        function RegisterPage() {
+            return `
+                <div class="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center p-4">
+                    <div class="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
+                        <div class="text-center mb-8">
+                            <h1 class="text-3xl font-bold text-gray-800 mb-2">建立教師帳號</h1>
+                            <p class="text-gray-600">加入博幼800單教學平台</p>
+                        </div>
+
+                        <form id="registerForm" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">教師姓名</label>
+                                <input type="text" required placeholder="李老師" 
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">教師信箱</label>
+                                <input type="email" required placeholder="teacher@example.com" 
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">密碼</label>
+                                <input type="password" required placeholder="••••••••" 
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">確認密碼</label>
+                                <input type="password" required placeholder="••••••••" 
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 rounded-lg transition">
+                                建立帳號
+                            </button>
+                        </form>
+
+                        <div class="mt-6 pt-6 border-t border-gray-200">
+                            <button onclick="AppState.currentPage = 'login'; render()" 
+                                class="w-full text-blue-500 hover:text-blue-600 font-semibold py-2 rounded-lg transition">
+                                返回登入
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ========== 儀表板页面 ==========
+        function DashboardPage() {
+            return `
+                <div class="min-h-screen bg-gray-50">
+                    <!-- Navigation Header -->
+                    <nav class="bg-white shadow-md">
+                        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+                            <div class="flex items-center gap-4">
+                                <h1 class="text-2xl font-bold text-blue-600">📚 教師後台</h1>
+                                <span class="text-gray-600">歡迎，${AppState.teacher?.name || '教師'}</span>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <button onclick="toggleTheme()" class="p-2 hover:bg-gray-200 rounded-lg">
+                                    <span class="text-xl">${AppState.theme === 'dark' ? '🌙' : '☀️'}</span>
+                                </button>
+                                <button onclick="logout()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg">
+                                    登出
+                                </button>
+                            </div>
+                        </div>
+                    </nav>
+
+                    <!-- Sidebar Navigation -->
+                    <div class="flex">
+                        <aside class="w-64 bg-white shadow-md min-h-[calc(100vh-70px)]">
+                            <nav class="p-4 space-y-2">
+                                <button onclick="AppState.currentPage = 'overview'; render()" 
+                                    class="w-full text-left px-4 py-3 ${AppState.currentPage === 'overview' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100'} rounded-lg font-medium">
+                                    📊 儀表板
+                                </button>
+                                <button onclick="AppState.currentPage = 'students'; render()" 
+                                    class="w-full text-left px-4 py-3 ${AppState.currentPage === 'students' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100'} rounded-lg font-medium">
+                                    👥 學生管理
+                                </button>
+                                <button onclick="AppState.currentPage = 'progress'; render()" 
+                                    class="w-full text-left px-4 py-3 ${AppState.currentPage === 'progress' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100'} rounded-lg font-medium">
+                                    📈 進度追蹤
+                                </button>
+                                <button onclick="AppState.currentPage = 'statistics'; render()" 
+                                    class="w-full text-left px-4 py-3 ${AppState.currentPage === 'statistics' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100'} rounded-lg font-medium">
+                                    📋 統計分析
+                                </button>
+                                <button onclick="exportStudentData()" 
+                                    class="w-full text-left px-4 py-3 hover:bg-gray-100 rounded-lg font-medium text-green-600">
+                                    💾 匯出數據
+                                </button>
+                            </nav>
+                        </aside>
+
+                        <!-- Main Content -->
+                        <main class="flex-1 p-8">
+                            <div id="pageContent">
+                                ${renderPageContent()}
+                            </div>
+                        </main>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ========== 頁面內容渲染 ==========
+        function renderPageContent() {
+            switch (AppState.currentPage) {
+                case 'overview':
+                    return OverviewContent();
+                case 'students':
+                    return StudentsContent();
+                case 'progress':
+                    return ProgressContent();
+                case 'statistics':
+                    return StatisticsContent();
+                default:
+                    return OverviewContent();
+            }
+        }
+
+        // ========== 概覽頁面 ==========
+        function OverviewContent() {
+            return `
+                <div class="space-y-6">
+                    <h2 class="text-3xl font-bold text-gray-800">儀表板</h2>
+
+                    <!-- Statistics Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="text-gray-600 text-sm font-medium">學生總數</div>
+                            <div class="text-4xl font-bold text-blue-600 mt-2">${AppState.students.length}</div>
+                            <div class="text-gray-500 text-xs mt-2">📚 已管理學生</div>
+                        </div>
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="text-gray-600 text-sm font-medium">班級平均分數</div>
+                            <div class="text-4xl font-bold text-green-600 mt-2">${AppState.stats.averageScore || 0}</div>
+                            <div class="text-gray-500 text-xs mt-2">🎯 整體表現</div>
+                        </div>
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="text-gray-600 text-sm font-medium">總遊戲局數</div>
+                            <div class="text-4xl font-bold text-purple-600 mt-2">${AppState.stats.totalGames || 0}</div>
+                            <div class="text-gray-500 text-xs mt-2">🎮 活躍度</div>
+                        </div>
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="text-gray-600 text-sm font-medium">班級總星星</div>
+                            <div class="text-4xl font-bold text-yellow-600 mt-2">${AppState.stats.totalStars || 0}</div>
+                            <div class="text-gray-500 text-xs mt-2">⭐ 成就</div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity -->
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">📊 最近活動</h3>
+                        <div class="space-y-3">
+                            ${AppState.students.slice(0, 5).map(student => `
+                                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    <div>
+                                        <p class="font-medium text-gray-800">${student.name}</p>
+                                        <p class="text-sm text-gray-600">${student.email}</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="font-bold text-blue-600">${student.totalScore || 0} 分</p>
+                                        <p class="text-sm text-gray-600">${student.gamesPlayed || 0} 局遊戲</p>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ========== 學生管理頁面 ==========
+        function StudentsContent() {
+            return `
+                <div class="space-y-6">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-3xl font-bold text-gray-800">👥 學生管理</h2>
+                        <button onclick="showAddStudentForm()" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold">
+                            ➕ 新增學生
+                        </button>
+                    </div>
+
+                    <!-- Add Student Form (Hidden) -->
+                    <div id="addStudentForm" class="hidden bg-white rounded-lg shadow p-6">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">新增學生</h3>
+                        <form onsubmit="addStudent(event)" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">學生姓名</label>
+                                <input type="text" id="studentName" required placeholder="輸入學生姓名"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">學生信箱</label>
+                                <input type="email" id="studentEmail" required placeholder="student@example.com"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div class="flex gap-4">
+                                <button type="submit" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 rounded-lg">
+                                    新增
+                                </button>
+                                <button type="button" onclick="hideAddStudentForm()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 rounded-lg">
+                                    取消
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Students List -->
+                    <div class="bg-white rounded-lg shadow overflow-hidden">
+                        <table class="w-full">
+                            <thead class="bg-gray-100 border-b">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">姓名</th>
+                                    <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">信箱</th>
+                                    <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">總分</th>
+                                    <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">遊戲局數</th>
+                                    <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">勝率</th>
+                                    <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${AppState.students.map((student, index) => `
+                                    <tr class="border-b hover:bg-gray-50">
+                                        <td class="px-6 py-4 text-sm text-gray-800">${student.name}</td>
+                                        <td class="px-6 py-4 text-sm text-gray-600">${student.email}</td>
+                                        <td class="px-6 py-4 text-sm font-semibold text-blue-600">${student.totalScore || 0}</td>
+                                        <td class="px-6 py-4 text-sm text-gray-800">${student.gamesPlayed || 0}</td>
+                                        <td class="px-6 py-4 text-sm text-gray-800">${student.winRate || 0}%</td>
+                                        <td class="px-6 py-4 text-center space-x-2">
+                                            <button onclick="viewStudentProgress('${student.id}')" class="text-blue-500 hover:text-blue-700 font-medium">查看</button>
+                                            <button onclick="deleteStudent('${student.id}')" class="text-red-500 hover:text-red-700 font-medium">刪除</button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                        ${AppState.students.length === 0 ? '<div class="p-6 text-center text-gray-500">還沒有學生，點擊「新增學生」開始添加</div>' : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // ========== 進度追蹤頁面 ==========
+        function ProgressContent() {
+            return `
+                <div class="space-y-6">
+                    <h2 class="text-3xl font-bold text-gray-800">📈 進度追蹤</h2>
+
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">學生進度統計</h3>
+                        <div class="space-y-4">
+                            ${AppState.students.map(student => `
+                                <div class="p-4 bg-gray-50 rounded-lg">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <span class="font-medium text-gray-800">${student.name}</span>
+                                        <span class="text-sm text-gray-600">${student.totalScore || 0} 分</span>
+                                    </div>
+                                    <div class="w-full bg-gray-300 rounded-full h-2">
+                                        <div class="bg-blue-500 h-2 rounded-full" style="width: ${Math.min((student.totalScore || 0) / 100, 100)}%"></div>
+                                    </div>
+                                    <div class="flex justify-between items-center mt-2 text-xs text-gray-600">
+                                        <span>⭐ ${student.totalStars || 0} 星</span>
+                                        <span>🎮 ${student.gamesPlayed || 0} 局</span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ========== 統計分析頁面 ==========
+        function StatisticsContent() {
+            return `
+                <div class="space-y-6">
+                    <h2 class="text-3xl font-bold text-gray-800">📋 統計分析</h2>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- 得分分佈 -->
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <h3 class="text-lg font-bold text-gray-800 mb-4">📊 得分分佈</h3>
+                            <canvas id="scoreChart"></canvas>
+                        </div>
+
+                        <!-- 遊戲統計 -->
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <h3 class="text-lg font-bold text-gray-800 mb-4">🎮 遊戲模式統計</h3>
+                            <canvas id="modeChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- 詳細統計 -->
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">📈 詳細統計</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="p-4 bg-blue-50 rounded-lg">
+                                <p class="text-gray-600 text-sm">班級平均分數</p>
+                                <p class="text-3xl font-bold text-blue-600 mt-2">${AppState.stats.averageScore || 0}</p>
+                            </div>
+                            <div class="p-4 bg-green-50 rounded-lg">
+                                <p class="text-gray-600 text-sm">平均每人遊戲次數</p>
+                                <p class="text-3xl font-bold text-green-600 mt-2">${AppState.stats.averageGames || 0}</p>
+                            </div>
+                            <div class="p-4 bg-purple-50 rounded-lg">
+                                <p class="text-gray-600 text-sm">班級總成就</p>
+                                <p class="text-3xl font-bold text-purple-600 mt-2">${AppState.stats.totalStars || 0}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ========== 工具函數 ==========
+        function render() {
+            const root = document.getElementById('root');
+            if (AppState.currentPage === 'login') {
+                root.innerHTML = LoginPage();
+                attachLoginHandlers();
+            } else if (AppState.currentPage === 'register') {
+                root.innerHTML = RegisterPage();
+                attachRegisterHandlers();
+            } else {
+                root.innerHTML = DashboardPage();
+                attachDashboardHandlers();
+            }
+        }
+
+        function toggleTheme() {
+            AppState.theme = AppState.theme === 'light' ? 'dark' : 'light';
+            localStorage.setItem('teacherTheme', AppState.theme);
+            document.documentElement.setAttribute('data-theme', AppState.theme);
+            render();
+        }
+
+        function logout() {
+            localStorage.removeItem('teacherToken');
+            AppState.currentPage = 'login';
+            AppState.teacher = null;
+            render();
+        }
+
+        function showAddStudentForm() {
+            document.getElementById('addStudentForm').classList.remove('hidden');
+        }
+
+        function hideAddStudentForm() {
+            document.getElementById('addStudentForm').classList.add('hidden');
+        }
+
+        function addStudent(event) {
+            event.preventDefault();
+            const name = document.getElementById('studentName').value;
+            const email = document.getElementById('studentEmail').value;
+            
+            AppState.students.push({
+                id: Date.now().toString(),
+                name,
+                email,
+                totalScore: 0,
+                gamesPlayed: 0,
+                winRate: 0,
+                totalStars: 0
+            });
+            
+            hideAddStudentForm();
+            AppState.currentPage = 'students';
+            render();
+        }
+
+        function deleteStudent(studentId) {
+            if (confirm('確定要刪除此學生嗎？')) {
+                AppState.students = AppState.students.filter(s => s.id !== studentId);
+                render();
+            }
+        }
+
+        function viewStudentProgress(studentId) {
+            AppState.selectedStudent = AppState.students.find(s => s.id === studentId);
+            alert(`${AppState.selectedStudent.name}\n總分: ${AppState.selectedStudent.totalScore}\n遊戲次數: ${AppState.selectedStudent.gamesPlayed}`);
+        }
+
+        function exportStudentData() {
+            const data = AppState.students.map(s => ({
+                姓名: s.name,
+                信箱: s.email,
+                總分: s.totalScore,
+                遊戲局數: s.gamesPlayed,
+                勝率: s.winRate + '%'
+            }));
+            
+            const csv = [Object.keys(data[0] || {}).join(',')];
+            data.forEach(row => {
+                csv.push(Object.values(row).join(','));
+            });
+            
+            const blob = new Blob([csv.join('\n')], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `student-data-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+        }
+
+        function attachLoginHandlers() {
+            document.getElementById('loginForm')?.addEventListener('submit', (e) => {
+                e.preventDefault();
+                AppState.currentPage = 'overview';
+                AppState.teacher = { name: '李老師' };
+                // Mock 學生數據
+                AppState.students = [
+                    { id: '1', name: '王小明', email: 'wang@example.com', totalScore: 850, gamesPlayed: 12, winRate: 85, totalStars: 35 },
+                    { id: '2', name: '陳美華', email: 'chen@example.com', totalScore: 920, gamesPlayed: 15, winRate: 90, totalStars: 42 },
+                    { id: '3', name: '林家豪', email: 'lin@example.com', totalScore: 680, gamesPlayed: 10, winRate: 75, totalStars: 28 }
+                ];
+                AppState.stats = {
+                    averageScore: 817,
+                    totalGames: 37,
+                    averageGames: 12,
+                    totalStars: 105
+                };
+                render();
+            });
+        }
+
+        function attachRegisterHandlers() {
+            document.getElementById('registerForm')?.addEventListener('submit', (e) => {
+                e.preventDefault();
+                alert('帳號建立成功！請使用新帳號登入');
+                AppState.currentPage = 'login';
+                render();
+            });
+        }
+
+        function attachDashboardHandlers() {
+            // Charts initialization
+            setTimeout(() => {
+                if (document.getElementById('scoreChart')) {
+                    new Chart(document.getElementById('scoreChart'), {
+                        type: 'bar',
+                        data: {
+                            labels: AppState.students.map(s => s.name),
+                            datasets: [{
+                                label: '總分',
+                                data: AppState.students.map(s => s.totalScore),
+                                backgroundColor: 'rgba(59, 130, 246, 0.5)'
+                            }]
+                        },
+                        options: { responsive: true, plugins: { legend: { display: true } } }
+                    });
+                }
+                if (document.getElementById('modeChart')) {
+                    new Chart(document.getElementById('modeChart'), {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['認讀挑戰', '字母重組', '拼字測驗'],
+                            datasets: [{
+                                data: [40, 35, 25],
+                                backgroundColor: ['rgba(59, 130, 246, 0.5)', 'rgba(34, 197, 94, 0.5)', 'rgba(168, 85, 247, 0.5)']
+                            }]
+                        },
+                        options: { responsive: true }
+                    });
+                }
+            }, 100);
+        }
+
+        // Initialize
+        document.documentElement.setAttribute('data-theme', AppState.theme);
+        render();
+    </script>
+</body>
+</html>
