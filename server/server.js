@@ -42,7 +42,6 @@ try {
   });
 } catch (error) {
   console.warn('Firebase initialization warning:', error.message);
-  // Continue without Firebase for development
 }
 
 const db = admin.database();
@@ -64,14 +63,12 @@ app.post('/api/auth/register', async (req, res) => {
   try {
     const { email, password, name } = req.body;
     
-    // Create Firebase user
     const userRecord = await admin.auth().createUser({
       email,
       password,
       displayName: name
     });
     
-    // Store teacher info in database
     await db.ref(`teachers/${userRecord.uid}`).set({
       name,
       email,
@@ -94,10 +91,7 @@ app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
     
-    // Find user by email
     const user = await admin.auth().getUserByEmail(email);
-    
-    // Generate custom token
     const token = await admin.auth().createCustomToken(user.uid);
     
     res.json({
@@ -127,10 +121,8 @@ app.get('/api/teacher/:teacherId/dashboard', async (req, res) => {
       });
     });
     
-    // Calculate statistics
     let totalScore = 0;
     let totalGames = 0;
-    let averageWinRate = 0;
     
     students.forEach(student => {
       totalScore += student.totalScore || 0;
@@ -156,7 +148,7 @@ app.get('/api/teacher/:teacherId/dashboard', async (req, res) => {
   }
 });
 
-// Add student to class
+// Add student
 app.post('/api/teacher/:teacherId/add-student', async (req, res) => {
   try {
     const { teacherId } = req.params;
@@ -226,7 +218,6 @@ app.get('/api/teacher/:teacherId/export-data', async (req, res) => {
       });
     });
     
-    // Generate CSV
     const csv = [
       ['Student Name', 'Email', 'Total Score', 'Games Played', 'Win Rate', 'Created At'],
       ...students.map(s => [
@@ -247,12 +238,11 @@ app.get('/api/teacher/:teacherId/export-data', async (req, res) => {
   }
 });
 
-// ============ Socket.io Events for Real-time Multiplayer ============
+// ============ Socket.io Events ============
 
 io.on('connection', (socket) => {
   console.log('New user connected:', socket.id);
   
-  // User joins
   socket.on('user_join', (data) => {
     const { userId, userName } = data;
     
@@ -269,10 +259,8 @@ io.on('connection', (socket) => {
     });
     
     io.emit('user_online', { userId, userName });
-    console.log(`User ${userName} joined`);
   });
   
-  // Create game room
   socket.on('create_game_room', (data) => {
     const { difficulty, mode, courseId } = data;
     const roomId = `room_${Date.now()}`;
@@ -292,10 +280,8 @@ io.on('connection', (socket) => {
     socket.join(roomId);
     socket.emit('room_created', { roomId });
     io.emit('room_available', { roomId, difficulty, mode, players: 1 });
-    console.log(`Room created: ${roomId}`);
   });
   
-  // Join game room
   socket.on('join_game_room', (data) => {
     const { roomId } = data;
     const room = gameRooms.get(roomId);
@@ -310,7 +296,6 @@ io.on('connection', (socket) => {
         status: 'ready'
       });
       
-      // Start game after short delay
       setTimeout(() => {
         io.to(roomId).emit('game_start', {
           roomId,
@@ -318,14 +303,11 @@ io.on('connection', (socket) => {
           mode: room.mode
         });
       }, 1000);
-      
-      console.log(`Player joined room: ${roomId}`);
     } else {
       socket.emit('join_error', { message: 'Room full or not found' });
     }
   });
   
-  // Submit answer
   socket.on('submit_answer', (data) => {
     const { roomId, answer, correct, timeRemaining } = data;
     const room = gameRooms.get(roomId);
@@ -347,7 +329,6 @@ io.on('connection', (socket) => {
     }
   });
   
-  // End game
   socket.on('end_game', (data) => {
     const { roomId } = data;
     const room = gameRooms.get(roomId);
@@ -363,7 +344,6 @@ io.on('connection', (socket) => {
         winner: results[0]?.playerId
       });
       
-      // Save game results to database
       results.forEach(result => {
         const userSession = userSessions.get(result.playerId);
         if (userSession) {
@@ -379,7 +359,6 @@ io.on('connection', (socket) => {
         }
       });
       
-      // Clean up room
       setTimeout(() => {
         gameRooms.delete(roomId);
         io.emit('room_closed', { roomId });
@@ -387,7 +366,6 @@ io.on('connection', (socket) => {
     }
   });
   
-  // Disconnect
   socket.on('disconnect', () => {
     const userSession = userSessions.get(socket.id);
     
@@ -395,17 +373,14 @@ io.on('connection', (socket) => {
       onlineUsers.delete(userSession.userId);
       io.emit('user_offline', { userId: userSession.userId });
       userSessions.delete(socket.id);
-      console.log(`User ${userSession.userName} disconnected`);
     }
   });
 });
 
-// Start server
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📡 Socket.io ready for multiplayer games`);
-  console.log(`🔥 Boyo800 Backend Service Started!`);
+  console.log(`🔥 Socket.io ready for multiplayer games`);
 });
 
 module.exports = { app, io, db };
